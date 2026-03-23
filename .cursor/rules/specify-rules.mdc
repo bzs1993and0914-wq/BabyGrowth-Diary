@@ -1,0 +1,35 @@
+---
+description: Project Development Guidelines
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# 03-21 Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2026-03-21
+
+## Active Technologies
+
+- TypeScript 5.x (Electron/Vue), Python 3.11+ (Backend) + Electron 33+, Vue 3.5+, Element Plus 2.9+, Pinia 2.x, vue-router 4.x, axios; FastAPI 0.115+, SQLAlchemy 2.0, Pydantic v2, Pillow 11+, ffmpeg-python, pillow-heif, aiosqlite (001-baby-growth-timeline)
+
+## Project Structure
+
+```text
+src/
+tests/
+```
+
+## Commands
+
+cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] pytest [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] ruff check .
+
+## Code Style
+
+TypeScript 5.x (Electron/Vue), Python 3.11+ (Backend): Follow standard conventions
+
+## Recent Changes
+
+- 001-baby-growth-timeline: Added TypeScript 5.x (Electron/Vue), Python 3.11+ (Backend) + Electron 33+, Vue 3.5+, Element Plus 2.9+, Pinia 2.x, vue-router 4.x, axios; FastAPI 0.115+, SQLAlchemy 2.0, Pydantic v2, Pillow 11+, ffmpeg-python, pillow-heif, aiosqlite
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->

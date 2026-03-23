@@ -1,0 +1,26 @@
+appId: com.babygrow.app
+productName: BabyGrow
+directories:
+  output: release
+files:
+  - dist/**/*
+  - dist-electron/**/*
+extraResources:
+  - from: backend/dist/babygrow-server
+    to: babygrow-server
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: build/icon.icns
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true

@@ -1,0 +1,45 @@
+{
+  "name": "baby-grow",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"cd backend && source .venv/bin/activate && uvicorn app.main:app --reload --port 18900\" \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev:vite": "vite",
+    "dev:electron": "wait-on http://localhost:5173 && electron .",
+    "dev:backend": "cd backend && uvicorn app.main:app --reload --port 18900",
+    "build": "vue-tsc --noEmit && vite build && electron-builder",
+    "lint": "eslint src --ext .ts,.vue",
+    "format": "prettier --write \"src/**/*.{ts,vue,css}\"",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "vue": "^3.5",
+    "vue-router": "^4",
+    "pinia": "^2",
+    "element-plus": "^2.9",
+    "axios": "^1",
+    "@element-plus/icons-vue": "^2",
+    "echarts": "^5",
+    "vue-echarts": "^7"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vite": "^6",
+    "@vitejs/plugin-vue": "^5",
+    "electron": "^33",
+    "electron-builder": "^25",
+    "vue-tsc": "^2",
+    "vitest": "^3",
+    "concurrently": "^9",
+    "wait-on": "^8",
+    "eslint": "^9",
+    "prettier": "^3",
+    "@typescript-eslint/parser": "^8",
+    "@typescript-eslint/eslint-plugin": "^8",
+    "unplugin-auto-import": "^19",
+    "unplugin-vue-components": "^28",
+    "vite-plugin-electron": "^0.28",
+    "vite-plugin-electron-renderer": "^0.14"
+  }
+}
