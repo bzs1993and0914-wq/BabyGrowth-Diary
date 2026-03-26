@@ -7,23 +7,27 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.database.connection import async_session
+from app.api.deps import get_current_user, get_db
 from app.models.daily_record import DailyRecord
 from app.models.growth_metric import GrowthMetric
+from app.models.user import User
 from app.schemas.growth_metrics import GrowthCurveData, GrowthMetricCreate, GrowthMetricResponse
 
 router = APIRouter(prefix="/growth-metrics", tags=["growth-metrics"])
 
 
-async def get_db():
-    async with async_session() as session:
-        yield session
-
-
 @router.post("/", response_model=GrowthMetricResponse, status_code=201)
-async def create_metric(data: GrowthMetricCreate, db: AsyncSession = Depends(get_db)):
+async def create_metric(
+    data: GrowthMetricCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """为指定每日记录添加一条生长指标（身高/体重/头围）数据。"""
     result = await db.execute(
-        select(DailyRecord).where(DailyRecord.id == data.daily_record_id)
+        select(DailyRecord).where(
+            DailyRecord.id == data.daily_record_id,
+            DailyRecord.user_id == current_user.id,
+        )
     )
     record = result.scalars().first()
     if not record:
@@ -57,11 +61,14 @@ async def list_metrics(
     ),
     date_from: Optional[str] = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
     date_to: Optional[str] = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """列出当前用户的生长指标记录，支持按类型和日期范围过滤，结果按日期升序排列。"""
     query = (
         select(GrowthMetric)
         .join(DailyRecord)
+        .where(DailyRecord.user_id == current_user.id)
         .options(selectinload(GrowthMetric.daily_record))
         .order_by(DailyRecord.date)
     )
@@ -95,13 +102,18 @@ async def get_curve(
     metric_type: str = Query(..., pattern=r"^(height|weight|head_circumference)$"),
     date_from: Optional[str] = Query(None),
     date_to: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """返回指定类型生长曲线所需的日期序列和对应数值序列，供前端图表直接使用。"""
     query = (
         select(GrowthMetric)
         .join(DailyRecord)
+        .where(
+            GrowthMetric.metric_type == metric_type,
+            DailyRecord.user_id == current_user.id,
+        )
         .options(selectinload(GrowthMetric.daily_record))
-        .where(GrowthMetric.metric_type == metric_type)
         .order_by(DailyRecord.date)
     )
     if date_from:
@@ -122,10 +134,25 @@ async def get_curve(
 
 
 @router.delete("/{metric_id}", status_code=204)
-async def delete_metric(metric_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_metric(
+    metric_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """删除指定生长指标，并校验其归属于当前用户的记录（防止越权删除）。"""
     result = await db.execute(select(GrowthMetric).where(GrowthMetric.id == metric_id))
     metric = result.scalars().first()
     if not metric:
         raise HTTPException(status_code=404, detail="Growth metric not found")
+
+    rec_result = await db.execute(
+        select(DailyRecord).where(
+            DailyRecord.id == metric.daily_record_id,
+            DailyRecord.user_id == current_user.id,
+        )
+    )
+    if not rec_result.scalars().first():
+        raise HTTPException(status_code=404, detail="Growth metric not found")
+
     await db.delete(metric)
     await db.commit()

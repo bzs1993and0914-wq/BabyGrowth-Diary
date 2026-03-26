@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
+import { useAuthStore } from '@/stores/auth'
 import { fetchStorageStats } from '@/api/storage'
 import { startExport, getExportStatus } from '@/api/export'
 import type { StorageStats, ExportStatus } from '@/types/api'
@@ -8,6 +9,57 @@ import ThemeSwitcher from '@/components/common/ThemeSwitcher.vue'
 import { ElMessage } from 'element-plus'
 
 const settingsStore = useSettingsStore()
+const auth = useAuthStore()
+
+const currentPassword = ref('')
+const newPassword = ref('')
+const changingPwd = ref(false)
+const tierChoice = ref<'normal' | 'vip'>('normal')
+
+watch(
+  () => auth.user?.account_tier,
+  (t) => {
+    if (t) tierChoice.value = t
+  },
+  { immediate: true },
+)
+
+async function handleChangePassword() {
+  if (!currentPassword.value || !newPassword.value) {
+    ElMessage.warning('请填写当前密码和新密码')
+    return
+  }
+  if (newPassword.value.length < 6) {
+    ElMessage.warning('新密码至少 6 位')
+    return
+  }
+  changingPwd.value = true
+  try {
+    await auth.changePassword({
+      current_password: currentPassword.value,
+      new_password: newPassword.value,
+    })
+    ElMessage.success('密码已更新')
+    currentPassword.value = ''
+    newPassword.value = ''
+  } catch (e: unknown) {
+    const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data
+      ?.detail
+    ElMessage.error(typeof detail === 'string' ? detail : '修改失败')
+  } finally {
+    changingPwd.value = false
+  }
+}
+
+async function onTierChange(val: string | number | boolean | undefined) {
+  if (val !== 'normal' && val !== 'vip') return
+  try {
+    await auth.setAccountTier(val)
+    ElMessage.success(val === 'vip' ? '已切换为 VIP（体验）' : '已切换为普通账号')
+  } catch {
+    ElMessage.error('切换失败')
+  }
+}
 
 const stats = ref<StorageStats | null>(null)
 const statsLoading = ref(true)
@@ -69,6 +121,31 @@ async function pollExport(exportId: string) {
 <template>
   <div class="settings-view">
     <h2 class="page-title">设置</h2>
+
+    <el-card v-if="auth.user" shadow="never" class="section-card">
+      <h3 class="section-title">账号与安全</h3>
+      <p class="account-line">
+        当前用户：<strong>{{ auth.user.username }}</strong>
+        <el-tag size="small" :type="auth.user.account_tier === 'vip' ? 'warning' : 'info'">
+          {{ auth.user.account_tier === 'vip' ? 'VIP · 单条记录最多 9 张图' : '普通 · 单条记录 1 张图' }}
+        </el-tag>
+      </p>
+      <el-form label-position="top" class="pwd-form" @submit.prevent="handleChangePassword">
+        <el-form-item label="当前密码">
+          <el-input v-model="currentPassword" type="password" show-password autocomplete="current-password" />
+        </el-form-item>
+        <el-form-item label="新密码（至少 6 位）">
+          <el-input v-model="newPassword" type="password" show-password autocomplete="new-password" />
+        </el-form-item>
+        <el-button type="primary" :loading="changingPwd" native-type="submit">修改密码</el-button>
+      </el-form>
+      <el-divider />
+      <p class="tier-desc">以下为本地体验开关，用于验收 VIP 与普通账号的上传张数差异。</p>
+      <el-radio-group v-model="tierChoice" @change="onTierChange">
+        <el-radio-button value="normal">普通</el-radio-button>
+        <el-radio-button value="vip">VIP</el-radio-button>
+      </el-radio-group>
+    </el-card>
 
     <el-card shadow="never" class="section-card">
       <ThemeSwitcher />
@@ -256,5 +333,26 @@ async function pollExport(exportId: string) {
 .about-row span:last-child {
   color: var(--text-primary);
   font-weight: 500;
+}
+
+.account-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.pwd-form {
+  max-width: 400px;
+}
+
+.tier-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  line-height: 1.5;
 }
 </style>

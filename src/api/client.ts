@@ -1,17 +1,28 @@
 import axios from 'axios'
 import type { AxiosError, InternalAxiosRequestConfig } from 'axios'
+import { getStoredToken } from '@/utils/authToken'
 
+// Electron 模式下由主进程注入后端实际端口，开发模式回退到默认端口
 const apiClient = axios.create({
   baseURL: window.electronAPI?.apiBaseUrl || 'http://localhost:18900',
   timeout: 30_000,
   headers: { 'Content-Type': 'application/json' },
 })
 
+// 请求拦截器：从 localStorage 读取 JWT，自动附加到每个请求的 Authorization 头
 apiClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => config,
+  (config: InternalAxiosRequestConfig) => {
+    const token = getStoredToken()
+    if (token) {
+      config.headers = config.headers ?? {}
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
   (error: AxiosError) => Promise.reject(error),
 )
 
+// 响应拦截器：统一提取后端 detail 字段或根据 HTTP 状态码生成友好错误信息并打印日志
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {

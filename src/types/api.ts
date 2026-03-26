@@ -20,10 +20,33 @@ export interface TextEntryInput {
 export interface RecordCreate {
   date: string
   texts?: TextEntryInput[]
+  use_default_media_placeholder?: boolean
 }
 
 export interface RecordUpdate {
   texts?: TextEntryInput[]
+  use_default_media_placeholder?: boolean
+}
+
+export interface AuthUser {
+  id: number
+  username: string
+  account_tier: 'normal' | 'vip'
+}
+
+export interface RegisterPayload {
+  username: string
+  password: string
+}
+
+export interface LoginPayload {
+  username: string
+  password: string
+}
+
+export interface ChangePasswordPayload {
+  current_password: string
+  new_password: string
 }
 
 export interface MediaUpdate {
@@ -75,6 +98,7 @@ export interface RecordListItem {
   media_count: number
   text_count: number
   first_thumbnail: string | null
+  use_default_media_placeholder?: boolean
   has_milestone: boolean
   milestone_name: string | null
   milestone_icon: string | null
@@ -144,6 +168,7 @@ export interface RecordResponse {
   date: string
   created_at: string
   updated_at: string
+  use_default_media_placeholder?: boolean
   media_entries: MediaEntryResponse[]
   text_entries: TextEntryResponse[]
   milestone: MilestoneInfo | null

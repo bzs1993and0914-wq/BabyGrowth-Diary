@@ -1,11 +1,28 @@
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
-import { Plus, Clock, Star, TrendCharts, Sunny, Moon, Setting } from '@element-plus/icons-vue'
+import { Plus, Clock, Star, TrendCharts, Sunny, Moon, Setting, User } from '@element-plus/icons-vue'
 import { useSettingsStore } from '@/stores/settings'
+import { useAuthStore } from '@/stores/auth'
+import { ElMessageBox } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute()
 const settingsStore = useSettingsStore()
+const auth = useAuthStore()
+
+async function logout() {
+  try {
+    await ElMessageBox.confirm('确定退出当前账号？', '退出登录', {
+      type: 'warning',
+      confirmButtonText: '退出',
+      cancelButtonText: '取消',
+    })
+    auth.logout()
+    router.push('/login')
+  } catch {
+    /* cancel */
+  }
+}
 
 const navItems = [
   { label: '时间轴', path: '/', name: 'timeline', icon: Clock },
@@ -39,7 +56,13 @@ function isActive(name: string) {
       </nav>
 
       <div class="header-actions">
+        <span v-if="auth.user" class="user-chip" :title="auth.user.username">
+          <el-icon><User /></el-icon>
+          <span class="user-name">{{ auth.user.username }}</span>
+          <el-tag size="small" type="warning" v-if="auth.user.account_tier === 'vip'">VIP</el-tag>
+        </span>
         <el-button
+          v-if="auth.isAuthenticated"
           type="primary"
           :icon="Plus"
           round
@@ -48,6 +71,8 @@ function isActive(name: string) {
         >
           添加记录
         </el-button>
+        <el-button v-if="auth.isAuthenticated" text type="danger" @click="logout">退出</el-button>
+        <el-button v-else type="primary" text @click="router.push('/login')">登录</el-button>
         <el-tooltip :content="settingsStore.darkMode ? '切换亮色' : '切换暗色'" placement="bottom">
           <el-button circle @click="settingsStore.toggleDarkMode">
             <el-icon>
@@ -147,5 +172,20 @@ function isActive(name: string) {
 
 .add-btn {
   flex-shrink: 0;
+}
+
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  max-width: 140px;
+}
+
+.user-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

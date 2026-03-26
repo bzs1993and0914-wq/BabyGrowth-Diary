@@ -15,12 +15,21 @@ const props = defineProps<{
 const router = useRouter()
 const baseUrl = apiClient.defaults.baseURL ?? ''
 
+const placeholderSrc = '/default-growth-placeholder.svg'
+
 const thumbnailSrc = computed(() => {
   if (!props.item.first_thumbnail) return ''
   return props.item.first_thumbnail.startsWith('http')
     ? props.item.first_thumbnail
     : `${baseUrl}${props.item.first_thumbnail}`
 })
+
+const showDefaultThumb = computed(
+  () =>
+    !thumbnailSrc.value &&
+    !!props.item.use_default_media_placeholder &&
+    props.item.media_count === 0,
+)
 
 const formattedDate = computed(() => {
   const d = new Date(props.item.date)
@@ -36,8 +45,14 @@ function goDetail() {
 <template>
   <div :class="['timeline-card', layout]" @click="goDetail">
     <template v-if="layout === 'flat'">
-      <div class="card-thumb" v-if="thumbnailSrc">
-        <img :src="thumbnailSrc" alt="缩略图" @error="($event.target as HTMLImageElement).style.display = 'none'" />
+      <div class="card-thumb" v-if="thumbnailSrc || showDefaultThumb">
+        <img
+          v-if="thumbnailSrc"
+          :src="thumbnailSrc"
+          alt="缩略图"
+          @error="($event.target as HTMLImageElement).style.display = 'none'"
+        />
+        <img v-else-if="showDefaultThumb" :src="placeholderSrc" alt="默认配图" class="default-thumb" />
         <span v-if="item.media_count > 1" class="media-badge">
           <el-icon><Picture /></el-icon>
           {{ item.media_count }}
@@ -75,6 +90,12 @@ function goDetail() {
           class="collapsed-thumb"
           @error="($event.target as HTMLImageElement).style.display = 'none'"
         />
+        <img
+          v-else-if="showDefaultThumb"
+          :src="placeholderSrc"
+          class="collapsed-thumb"
+          alt=""
+        />
         <el-icon v-else :size="20" color="var(--text-secondary)"><Picture /></el-icon>
       </div>
       <span class="collapsed-date">{{ formattedDate }}</span>
@@ -94,6 +115,12 @@ function goDetail() {
 .timeline-card {
   cursor: pointer;
   transition: all 0.2s;
+}
+
+.default-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .timeline-card.flat {

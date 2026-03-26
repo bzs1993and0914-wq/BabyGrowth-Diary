@@ -7,7 +7,7 @@
     "dev": "concurrently \"cd backend && source .venv/bin/activate && uvicorn app.main:app --reload --port 18900\" \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "dev:vite": "vite",
     "dev:electron": "wait-on http://localhost:5173 && electron .",
-    "dev:backend": "cd backend && uvicorn app.main:app --reload --port 18900",
+    "dev:backend": "cd backend && source .venv/bin/activate && uvicorn app.main:app --reload --port 18900",
     "build": "vue-tsc --noEmit && vite build && electron-builder",
     "lint": "eslint src --ext .ts,.vue",
     "format": "prettier --write \"src/**/*.{ts,vue,css}\"",

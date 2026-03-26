@@ -5,20 +5,22 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_user, get_db
 from app.config import (
-    ALLOWED_IMAGE_TYPES,
     ALLOWED_MEDIA_TYPES,
     ALLOWED_VIDEO_TYPES,
     MAX_VIDEO_SIZE,
     THUMBNAIL_MAX_SIZE,
     THUMBNAIL_QUALITY,
+    TIER_MEDIA_CAP_NORMAL,
+    TIER_MEDIA_CAP_VIP,
 )
-from app.database.connection import async_session
 from app.models.daily_record import DailyRecord
 from app.models.media_entry import MediaEntry
+from app.models.user import User
 from app.schemas.media import MediaUpdate, MediaUploadResponse
 from app.services.media_processor import (
     convert_heic_to_jpeg,
@@ -37,9 +39,9 @@ from app.services.storage_manager import (
 router = APIRouter(prefix="/media", tags=["media"])
 
 
-async def get_db():
-    async with async_session() as session:
-        yield session
+def _tier_cap(tier: str) -> int:
+    """根据账号等级返回每条记录允许上传的媒体文件上限数量。"""
+    return TIER_MEDIA_CAP_VIP if tier == "vip" else TIER_MEDIA_CAP_NORMAL
 
 
 @router.post("/upload", response_model=MediaUploadResponse, status_code=201)
@@ -48,14 +50,37 @@ async def upload_media(
     daily_record_id: int = Form(...),
     description: Optional[str] = Form(None),
     sort_order: int = Form(0),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """上传媒体文件到指定日期记录。
+
+    流程：校验账号媒体上限 → 校验文件类型和大小 → 保存原文件 →
+    HEIC 自动转 JPEG → 生成缩略图（图片/视频各自处理） → 提取图片 EXIF 日期 →
+    写入数据库记录。
+    """
     result = await db.execute(
-        select(DailyRecord).where(DailyRecord.id == daily_record_id)
+        select(DailyRecord).where(
+            DailyRecord.id == daily_record_id,
+            DailyRecord.user_id == current_user.id,
+        )
     )
     record = result.scalars().first()
     if not record:
         raise HTTPException(status_code=404, detail="Daily record not found")
+
+    count_result = await db.execute(
+        select(func.count(MediaEntry.id)).where(
+            MediaEntry.daily_record_id == daily_record_id
+        )
+    )
+    existing = int(count_result.scalar() or 0)
+    cap = _tier_cap(current_user.account_tier)
+    if existing >= cap:
+        raise HTTPException(
+            status_code=400,
+            detail=f"已达到当前账号可关联的照片/视频上限（{cap} 个）",
+        )
 
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
@@ -127,16 +152,32 @@ async def upload_media(
         sort_order=sort_order,
     )
     db.add(entry)
+    if record.use_default_media_placeholder:
+        record.use_default_media_placeholder = False
     await db.commit()
     await db.refresh(entry)
     return MediaUploadResponse.model_validate(entry)
 
 
 @router.get("/{media_id}/file")
-async def serve_file(media_id: int, db: AsyncSession = Depends(get_db)):
+async def serve_file(
+    media_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """以流式响应提供原始媒体文件（图片/视频），按 1MB 分块传输以降低内存占用。"""
     result = await db.execute(select(MediaEntry).where(MediaEntry.id == media_id))
     entry = result.scalars().first()
     if not entry:
+        raise HTTPException(status_code=404, detail="Media not found")
+
+    rec_res = await db.execute(
+        select(DailyRecord).where(
+            DailyRecord.id == entry.daily_record_id,
+            DailyRecord.user_id == current_user.id,
+        )
+    )
+    if not rec_res.scalars().first():
         raise HTTPException(status_code=404, detail="Media not found")
 
     full_path = resolve_media_path(entry.original_path)
@@ -173,10 +214,24 @@ async def serve_file(media_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{media_id}/thumbnail")
-async def serve_thumbnail(media_id: int, db: AsyncSession = Depends(get_db)):
+async def serve_thumbnail(
+    media_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """返回媒体文件对应的缩略图（JPEG 格式），缩略图不存在时返回 404。"""
     result = await db.execute(select(MediaEntry).where(MediaEntry.id == media_id))
     entry = result.scalars().first()
     if not entry or not entry.thumbnail_path:
+        raise HTTPException(status_code=404, detail="Thumbnail not found")
+
+    rec_res = await db.execute(
+        select(DailyRecord).where(
+            DailyRecord.id == entry.daily_record_id,
+            DailyRecord.user_id == current_user.id,
+        )
+    )
+    if not rec_res.scalars().first():
         raise HTTPException(status_code=404, detail="Thumbnail not found")
 
     full_path = resolve_thumbnail_path(entry.thumbnail_path)
@@ -188,11 +243,24 @@ async def serve_thumbnail(media_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.put("/{media_id}", response_model=MediaUploadResponse)
 async def update_media(
-    media_id: int, data: MediaUpdate, db: AsyncSession = Depends(get_db)
+    media_id: int,
+    data: MediaUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
+    """更新媒体文件的描述文字或排列顺序（不更换文件本身）。"""
     result = await db.execute(select(MediaEntry).where(MediaEntry.id == media_id))
     entry = result.scalars().first()
     if not entry:
+        raise HTTPException(status_code=404, detail="Media not found")
+
+    rec_res = await db.execute(
+        select(DailyRecord).where(
+            DailyRecord.id == entry.daily_record_id,
+            DailyRecord.user_id == current_user.id,
+        )
+    )
+    if not rec_res.scalars().first():
         raise HTTPException(status_code=404, detail="Media not found")
 
     if data.description is not None:
@@ -206,10 +274,24 @@ async def update_media(
 
 
 @router.delete("/{media_id}", status_code=204)
-async def delete_media(media_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_media(
+    media_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """删除媒体记录，同时从磁盘删除原文件和缩略图。"""
     result = await db.execute(select(MediaEntry).where(MediaEntry.id == media_id))
     entry = result.scalars().first()
     if not entry:
+        raise HTTPException(status_code=404, detail="Media not found")
+
+    rec_res = await db.execute(
+        select(DailyRecord).where(
+            DailyRecord.id == entry.daily_record_id,
+            DailyRecord.user_id == current_user.id,
+        )
+    )
+    if not rec_res.scalars().first():
         raise HTTPException(status_code=404, detail="Media not found")
 
     cleanup_media_files(entry.original_path, entry.thumbnail_path)

@@ -1,4 +1,5 @@
 import platform
+import secrets
 from pathlib import Path
 
 APP_NAME = "BabyGrow"
@@ -26,3 +27,21 @@ ALLOWED_IMAGE_TYPES = {"jpg", "jpeg", "png", "heic", "heif"}
 ALLOWED_VIDEO_TYPES = {"mp4", "mov"}
 ALLOWED_MEDIA_TYPES = ALLOWED_IMAGE_TYPES | ALLOWED_VIDEO_TYPES
 MAX_VIDEO_SIZE = 2_147_483_648  # 2GB
+
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRE_HOURS = 24 * 7
+
+# Max media files per daily record by account tier
+TIER_MEDIA_CAP_NORMAL = 1
+TIER_MEDIA_CAP_VIP = 9
+
+
+def get_jwt_secret() -> str:
+    """Persist a stable secret under app data for JWT signing."""
+    path = APP_DATA_DIR / ".jwt_secret"
+    APP_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        return path.read_text(encoding="utf-8").strip()
+    secret = secrets.token_hex(32)
+    path.write_text(secret, encoding="utf-8")
+    return secret

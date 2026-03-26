@@ -3,7 +3,8 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Plus, Delete } from '@element-plus/icons-vue'
 import { useRecordsStore } from '@/stores/records'
-import { getMediaUrl, getThumbnailUrl } from '@/api/media'
+import { useAuthStore } from '@/stores/auth'
+import { deleteMedia, getMediaUrl, getThumbnailUrl } from '@/api/media'
 import MediaUploader from '@/components/media/MediaUploader.vue'
 import GrowthMetricInput from '@/components/record/GrowthMetricInput.vue'
 import type { MediaEntryResponse, TextEntryInput } from '@/types/api'
@@ -12,8 +13,14 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 const route = useRoute()
 const router = useRouter()
 const store = useRecordsStore()
+const auth = useAuthStore()
 
-const isNew = computed(() => route.params.date === undefined || route.name === 'record-new')
+const tierCap = computed(() => (auth.user?.account_tier === 'vip' ? 9 : 1))
+const pendingPlaceholder = ref(false)
+
+const isNew = computed(
+  () => route.params.date === undefined || route.name === 'record-new'
+)
 const recordDate = ref('')
 const texts = ref<{ id?: number; content: string; sort_order: number }[]>([])
 const uploadedMedia = ref<MediaEntryResponse[]>([])
@@ -36,6 +43,7 @@ onMounted(async () => {
           sort_order: t.sort_order,
         }))
         uploadedMedia.value = [...rec.media_entries]
+        pendingPlaceholder.value = rec.use_default_media_placeholder ?? false
       }
     } catch {
       ElMessage.error('加载记录失败')
@@ -59,6 +67,41 @@ function removeText(idx: number) {
 
 function onMediaUploaded(entry: MediaEntryResponse) {
   uploadedMedia.value.push(entry)
+  pendingPlaceholder.value = false
+}
+
+function onUploadBatchComplete(payload: { attempted: number; succeeded: number }) {
+  if (
+    payload.attempted > 0 &&
+    payload.succeeded === 0 &&
+    uploadedMedia.value.length === 0
+  ) {
+    pendingPlaceholder.value = true
+  }
+}
+
+async function handleDeleteMedia(media: MediaEntryResponse) {
+  try {
+    await ElMessageBox.confirm(
+      '确定要删除这张照片/视频吗？删除后无法恢复。',
+      '删除媒体',
+      {
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    await deleteMedia(media.id)
+    uploadedMedia.value = uploadedMedia.value.filter((m) => m.id !== media.id)
+    if (store.currentRecord) {
+      store.currentRecord.media_entries = uploadedMedia.value
+    }
+    ElMessage.success('已删除')
+  } catch (e: any) {
+    if (e !== 'cancel') {
+      ElMessage.error(e?.response?.data?.detail || '删除失败')
+    }
+  }
 }
 
 async function handleSave() {
@@ -71,18 +114,26 @@ async function handleSave() {
   try {
     const validTexts: TextEntryInput[] = texts.value
       .filter((t) => t.content.trim())
-      .map((t) => ({ id: t.id, content: t.content.trim(), sort_order: t.sort_order }))
+      .map((t) => ({
+        id: t.id,
+        content: t.content.trim(),
+        sort_order: t.sort_order,
+      }))
 
     if (isNew.value) {
       const rec = await store.saveRecord({
         date: recordDate.value,
         texts: validTexts,
+        use_default_media_placeholder: false,
       })
       recordId.value = rec.id
       ElMessage.success('记录已创建')
       router.replace(`/record/${rec.date}`)
     } else {
-      await store.editRecord(recordDate.value, { texts: validTexts })
+      await store.editRecord(recordDate.value, {
+        texts: validTexts,
+        use_default_media_placeholder: pendingPlaceholder.value,
+      })
       ElMessage.success('记录已更新')
       router.push(`/record/${recordDate.value}`)
     }
@@ -146,24 +197,42 @@ function handleCancel() {
 
       <div class="form-section" v-if="recordId">
         <label class="field-label">照片/视频</label>
-        <MediaUploader :daily-record-id="recordId" @uploaded="onMediaUploaded" />
+        <MediaUploader
+          :daily-record-id="recordId"
+          :max-per-record="tierCap"
+          :existing-media-count="uploadedMedia.length"
+          @uploaded="onMediaUploaded"
+          @upload-batch-complete="onUploadBatchComplete"
+        />
 
         <div v-if="uploadedMedia.length" class="media-grid">
           <div v-for="m in uploadedMedia" :key="m.id" class="media-thumb">
-            <img
-              v-if="m.media_type === 'image'"
-              :src="getThumbnailUrl(m.id)"
-              :alt="m.description || ''"
-            />
-            <div v-else class="video-thumb">
+            <div class="thumb-wrap">
               <img
-                v-if="m.thumbnail_path"
+                v-if="m.media_type === 'image'"
                 :src="getThumbnailUrl(m.id)"
                 :alt="m.description || ''"
               />
-              <span v-else class="video-label">视频</span>
+              <div v-else class="video-thumb">
+                <img
+                  v-if="m.thumbnail_path"
+                  :src="getThumbnailUrl(m.id)"
+                  :alt="m.description || ''"
+                />
+                <span v-else class="video-label">视频</span>
+              </div>
+              <el-button
+                class="delete-btn"
+                :icon="Delete"
+                circle
+                size="small"
+                type="danger"
+                @click="handleDeleteMedia(m)"
+              />
             </div>
-            <span v-if="m.description" class="thumb-desc">{{ m.description }}</span>
+            <span v-if="m.description" class="thumb-desc">{{
+              m.description
+            }}</span>
           </div>
         </div>
       </div>
@@ -264,6 +333,23 @@ function handleCancel() {
   border-radius: 8px;
   overflow: hidden;
   aspect-ratio: 1;
+}
+
+.thumb-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.thumb-wrap .delete-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0.85;
+}
+
+.thumb-wrap .delete-btn:hover {
+  opacity: 1;
 }
 
 .media-thumb img {

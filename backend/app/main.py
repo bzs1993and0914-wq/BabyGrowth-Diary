@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import VERSION
 from app.database.init_db import init_db
 from app.services.storage_manager import ensure_dirs
-from app.api import health, records, media, milestones, export, settings, growth_metrics
+from app.api import auth, health, records, media, milestones, export, settings, growth_metrics
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """FastAPI 生命周期管理：启动时初始化存储目录和数据库，关闭时记录日志。"""
     logger.info("Starting BabyGrow backend v%s", VERSION)
     ensure_dirs()
     await init_db()
@@ -41,6 +42,7 @@ app.add_middleware(
 )
 
 app.include_router(health.router, prefix="/api")
+app.include_router(auth.router, prefix="/api")
 app.include_router(records.router, prefix="/api")
 app.include_router(media.router, prefix="/api")
 app.include_router(milestones.router, prefix="/api")

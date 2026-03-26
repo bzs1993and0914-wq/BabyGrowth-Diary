@@ -1,6 +1,6 @@
 <template>
   <div id="app-root">
-    <AppHeader />
+    <AppHeader v-if="!route.meta.hideHeader" />
     <main class="main-content">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
@@ -12,15 +12,28 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import AppHeader from '@/components/common/AppHeader.vue'
 import { useSettingsStore } from '@/stores/settings'
+import { useAuthStore } from '@/stores/auth'
 
+const route = useRoute()
 const settingsStore = useSettingsStore()
+const auth = useAuthStore()
 
 onMounted(() => {
-  settingsStore.fetchSettings()
+  if (auth.isAuthenticated) {
+    settingsStore.fetchSettings()
+  }
 })
+
+watch(
+  () => auth.isAuthenticated,
+  (ok) => {
+    if (ok) settingsStore.fetchSettings()
+  },
+)
 </script>
 
 <style scoped>

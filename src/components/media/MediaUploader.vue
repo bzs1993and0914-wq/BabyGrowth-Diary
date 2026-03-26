@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { UploadFilled } from '@element-plus/icons-vue'
 import { uploadMedia } from '@/api/media'
 import type { MediaEntryResponse } from '@/types/api'
@@ -8,10 +8,15 @@ import type { UploadRawFile } from 'element-plus'
 
 const props = defineProps<{
   dailyRecordId: number
+  /** Max media items allowed for this record (account tier cap). */
+  maxPerRecord: number
+  /** Already saved media count for this record. */
+  existingMediaCount: number
 }>()
 
 const emit = defineEmits<{
   uploaded: [entry: MediaEntryResponse]
+  'upload-batch-complete': [payload: { attempted: number; succeeded: number }]
 }>()
 
 const ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'heic', 'heif', 'mp4', 'mov']
@@ -27,6 +32,16 @@ interface FileItem {
 const fileList = ref<FileItem[]>([])
 const uploading = ref(false)
 
+const slotsLeft = computed(() =>
+  Math.max(0, props.maxPerRecord - props.existingMediaCount),
+)
+
+const hintTier = computed(() =>
+  props.maxPerRecord > 1
+    ? `当前为 VIP，本条记录最多 ${props.maxPerRecord} 个媒体`
+    : '普通账号每条记录最多 1 张照片/视频（可在设置中切换为 VIP 体验多图）',
+)
+
 function beforeUpload(rawFile: UploadRawFile) {
   const ext = rawFile.name.split('.').pop()?.toLowerCase() || ''
   if (!ALLOWED_EXT.includes(ext)) {
@@ -35,6 +50,15 @@ function beforeUpload(rawFile: UploadRawFile) {
   }
   if (rawFile.size > MAX_SIZE) {
     ElMessage.error('文件大小不能超过 2GB')
+    return false
+  }
+
+  if (fileList.value.length >= slotsLeft.value) {
+    ElMessage.warning(
+      slotsLeft.value === 0
+        ? '已达到当前账号本条记录可添加的媒体上限'
+        : `最多再选择 ${slotsLeft.value} 个文件`,
+    )
     return false
   }
 
@@ -54,10 +78,13 @@ function removeFile(idx: number) {
 async function uploadAll() {
   if (!fileList.value.length) return
   uploading.value = true
+  let attempted = 0
+  let succeeded = 0
 
   for (const item of fileList.value) {
     if (item.done) continue
     item.uploading = true
+    attempted += 1
     try {
       const res = await uploadMedia(
         item.file,
@@ -65,6 +92,7 @@ async function uploadAll() {
         item.description || undefined,
       )
       item.done = true
+      succeeded += 1
       emit('uploaded', res.data)
     } catch {
       ElMessage.error(`上传失败: ${item.file.name}`)
@@ -75,20 +103,27 @@ async function uploadAll() {
 
   fileList.value = fileList.value.filter((f) => !f.done)
   uploading.value = false
-  if (!fileList.value.length) {
-    ElMessage.success('全部上传完成')
+  emit('upload-batch-complete', { attempted, succeeded })
+  if (attempted > 0) {
+    if (succeeded === attempted) {
+      ElMessage.success('全部上传完成')
+    } else if (succeeded > 0) {
+      ElMessage.warning('部分文件上传失败')
+    }
   }
 }
 </script>
 
 <template>
   <div class="media-uploader">
+    <p class="tier-hint">{{ hintTier }}</p>
     <el-upload
       drag
       multiple
       :show-file-list="false"
       :before-upload="beforeUpload"
       accept=".jpg,.jpeg,.png,.heic,.heif,.mp4,.mov"
+      :disabled="slotsLeft === 0"
     >
       <el-icon class="upload-icon" :size="40"><UploadFilled /></el-icon>
       <div class="upload-text">拖拽文件到此处，或 <em>点击选择</em></div>
@@ -125,7 +160,7 @@ async function uploadAll() {
         @click="uploadAll"
         style="margin-top: 8px"
       >
-        开始上传 ({{ fileList.filter(f => !f.done).length }}个文件)
+        开始上传 ({{ fileList.filter((f) => !f.done).length }}个文件)
       </el-button>
     </div>
   </div>
@@ -136,6 +171,13 @@ async function uploadAll() {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.tier-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 .media-uploader :deep(.el-upload-dragger) {

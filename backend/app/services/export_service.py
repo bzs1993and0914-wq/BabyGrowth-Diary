@@ -23,12 +23,16 @@ _export_tasks: Dict[str, dict] = {}
 
 
 def get_export_status(export_id: str) -> Optional[dict]:
+    """根据 export_id 从内存任务表中查询导出任务的当前状态，不存在返回 None。"""
     return _export_tasks.get(export_id)
 
 
 async def start_export(
-    date_from: Optional[str] = None, date_to: Optional[str] = None
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user_id: Optional[int] = None,
 ) -> str:
+    """创建导出任务并在后台异步执行，立即返回 export_id 供前端轮询进度。"""
     export_id = str(uuid.uuid4())
     _export_tasks[export_id] = {
         "export_id": export_id,
@@ -37,13 +41,20 @@ async def start_export(
         "file_path": None,
         "error": None,
     }
-    asyncio.create_task(_run_export(export_id, date_from, date_to))
+    asyncio.create_task(_run_export(export_id, date_from, date_to, user_id))
     return export_id
 
 
 async def _run_export(
-    export_id: str, date_from: Optional[str], date_to: Optional[str]
+    export_id: str,
+    date_from: Optional[str],
+    date_to: Optional[str],
+    user_id: Optional[int] = None,
 ) -> None:
+    """后台执行导出：查询记录 → 调用同步写 ZIP → 更新任务状态；
+
+    ZIP 写入在线程池中执行（asyncio.to_thread），避免阻塞事件循环。
+    """
     task = _export_tasks[export_id]
     try:
         EXPORT_DIR.mkdir(parents=True, exist_ok=True)
@@ -61,6 +72,8 @@ async def _run_export(
                 )
                 .order_by(DailyRecord.date)
             )
+            if user_id is not None:
+                query = query.where(DailyRecord.user_id == user_id)
             if date_from:
                 query = query.where(DailyRecord.date >= date_from)
             if date_to:
@@ -101,6 +114,9 @@ def _write_zip(
     task: dict,
     total: int,
 ) -> None:
+    """同步写入 ZIP 文件：依次打包 metadata.json、README.txt、媒体文件和 records.json，
+    每处理一条记录更新任务进度百分比（供轮询接口展示）。
+    """
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(
             "metadata.json", json.dumps(metadata, ensure_ascii=False, indent=2)

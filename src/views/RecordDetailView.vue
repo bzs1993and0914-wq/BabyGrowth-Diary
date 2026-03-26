@@ -105,6 +105,7 @@ function onMilestoneSaved() {
       <DiaryView
         :media-entries="record.media_entries"
         :text-entries="record.text_entries"
+        :use-default-media-placeholder="record.use_default_media_placeholder ?? false"
       />
 
       <div v-if="!record.milestone" class="milestone-action">

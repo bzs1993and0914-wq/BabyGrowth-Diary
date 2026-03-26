@@ -12,6 +12,10 @@ logger = logging.getLogger(__name__)
 def generate_image_thumbnail(
     input_path: Path, output_path: Path, max_size: int = 400, quality: int = 85
 ) -> bool:
+    """生成图片缩略图：先修正 EXIF 旋转方向，缩放至 max_size 以内，以 JPEG 格式保存。
+
+    RGBA/P 模式先转 RGB 以兼容 JPEG 编码；成功返回 True，失败返回 False。
+    """
     try:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with Image.open(input_path) as img:
@@ -27,6 +31,7 @@ def generate_image_thumbnail(
 
 
 def convert_heic_to_jpeg(input_path: Path, output_path: Path) -> bool:
+    """将 HEIC/HEIF 文件转换为高质量 JPEG（质量 95），依赖 pillow-heif 插件。"""
     try:
         import pillow_heif
 
@@ -43,6 +48,7 @@ def convert_heic_to_jpeg(input_path: Path, output_path: Path) -> bool:
 
 
 def extract_exif_date(file_path: Path) -> Optional[str]:
+    """从图片 EXIF 中提取 DateTimeOriginal 字段（相机拍摄时间），不存在则返回 None。"""
     try:
         with Image.open(file_path) as img:
             exif_data = img._getexif()
@@ -59,6 +65,7 @@ def extract_exif_date(file_path: Path) -> Optional[str]:
 
 
 def generate_video_thumbnail(input_path: Path, output_path: Path) -> bool:
+    """截取视频第 1 秒处的帧作为缩略图，宽度缩放为 400px，依赖 ffmpeg-python。"""
     try:
         import ffmpeg
 
@@ -77,6 +84,11 @@ def generate_video_thumbnail(input_path: Path, output_path: Path) -> bool:
 
 
 def _apply_exif_orientation(img: Image.Image) -> Image.Image:
+    """读取图片 EXIF Orientation 字段，将图片旋转/翻转至正确方向后返回。
+
+    处理常见的 8 种旋转方向（3/6/8 纯旋转，2/4/5/7 含镜像翻转）；
+    读取失败时静默返回原始图片对象。
+    """
     try:
         exif = img._getexif()
         if not exif:

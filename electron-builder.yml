@@ -1,5 +1,8 @@
 appId: com.babygrow.app
 productName: BabyGrow
+# 使用国内镜像加速 Electron 运行时下载（比直连 GitHub 通常更稳定、更快）
+electronDownload:
+  mirror: https://npmmirror.com/mirrors/electron/
 directories:
   output: release
 files:

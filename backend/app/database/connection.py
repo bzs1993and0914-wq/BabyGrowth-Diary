@@ -13,6 +13,7 @@ engine = create_async_engine(
 
 @event.listens_for(engine.sync_engine, "connect")
 def _set_sqlite_pragma(dbapi_conn, connection_record):
+    """每次新建连接时启用 WAL 日志模式（提升并发读写性能）和外键约束。"""
     cursor = dbapi_conn.cursor()
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.execute("PRAGMA foreign_keys=ON")
