@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import uuid
 from typing import Optional
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_current_user_flexible, get_db
 from app.config import (
     ALLOWED_MEDIA_TYPES,
     ALLOWED_VIDEO_TYPES,
@@ -162,7 +163,7 @@ async def upload_media(
 @router.get("/{media_id}/file")
 async def serve_file(
     media_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_flexible),
     db: AsyncSession = Depends(get_db),
 ):
     """以流式响应提供原始媒体文件（图片/视频），按 1MB 分块传输以降低内存占用。"""
@@ -193,6 +194,17 @@ async def serve_file(
     }
     ext = full_path.suffix.lstrip(".").lower()
     content_type = media_types.get(ext, "application/octet-stream")
+    download_name = entry.original_filename or full_path.name
+    safe_fallback = full_path.name.replace("\\", "\\\\").replace('"', '\\"')
+    try:
+        download_name.encode("latin-1")
+        safe_download_name = download_name.replace("\\", "\\\\").replace('"', '\\"')
+        content_disposition = f'inline; filename="{safe_download_name}"'
+    except UnicodeEncodeError:
+        content_disposition = (
+            f'inline; filename="{safe_fallback}"; '
+            f"filename*=UTF-8''{quote(download_name)}"
+        )
 
     def _iter_file():
         with open(full_path, "rb") as f:
@@ -205,18 +217,14 @@ async def serve_file(
     return StreamingResponse(
         _iter_file(),
         media_type=content_type,
-        headers={
-            "Content-Disposition": (
-                f'inline; filename="{entry.original_filename or full_path.name}"'
-            )
-        },
+        headers={"Content-Disposition": content_disposition},
     )
 
 
 @router.get("/{media_id}/thumbnail")
 async def serve_thumbnail(
     media_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_flexible),
     db: AsyncSession = Depends(get_db),
 ):
     """返回媒体文件对应的缩略图（JPEG 格式），缩略图不存在时返回 404。"""

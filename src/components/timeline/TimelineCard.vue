@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { Picture, VideoCamera } from '@element-plus/icons-vue'
 import type { RecordListItem } from '@/types/api'
 import type { LayoutMode } from '@/types/models'
-import apiClient from '@/api/client'
+import { buildMediaApiUrl } from '@/api/media'
 import MilestoneMarker from './MilestoneMarker.vue'
 
 const props = defineProps<{
@@ -13,7 +13,6 @@ const props = defineProps<{
 }>()
 
 const router = useRouter()
-const baseUrl = apiClient.defaults.baseURL ?? ''
 
 const placeholderSrc = '/default-growth-placeholder.svg'
 
@@ -21,15 +20,8 @@ const thumbnailSrc = computed(() => {
   if (!props.item.first_thumbnail) return ''
   return props.item.first_thumbnail.startsWith('http')
     ? props.item.first_thumbnail
-    : `${baseUrl}${props.item.first_thumbnail}`
+    : buildMediaApiUrl(props.item.first_thumbnail)
 })
-
-const showDefaultThumb = computed(
-  () =>
-    !thumbnailSrc.value &&
-    !!props.item.use_default_media_placeholder &&
-    props.item.media_count === 0,
-)
 
 const formattedDate = computed(() => {
   const d = new Date(props.item.date)
@@ -40,26 +32,28 @@ const formattedDate = computed(() => {
 function goDetail() {
   router.push(`/record/${props.item.date}`)
 }
+
+function onThumbError(e: Event) {
+  const img = e.target as HTMLImageElement
+  img.src = placeholderSrc
+  img.onerror = null
+}
 </script>
 
 <template>
   <div :class="['timeline-card', layout]" @click="goDetail">
     <template v-if="layout === 'flat'">
-      <div class="card-thumb" v-if="thumbnailSrc || showDefaultThumb">
+      <div class="card-thumb">
         <img
-          v-if="thumbnailSrc"
-          :src="thumbnailSrc"
+          :src="thumbnailSrc || placeholderSrc"
           alt="缩略图"
-          @error="($event.target as HTMLImageElement).style.display = 'none'"
+          class="default-thumb"
+          @error="onThumbError"
         />
-        <img v-else-if="showDefaultThumb" :src="placeholderSrc" alt="默认配图" class="default-thumb" />
         <span v-if="item.media_count > 1" class="media-badge">
           <el-icon><Picture /></el-icon>
           {{ item.media_count }}
         </span>
-      </div>
-      <div v-else class="card-thumb placeholder">
-        <el-icon :size="32" color="var(--text-secondary)"><Picture /></el-icon>
       </div>
 
       <div class="card-body">
@@ -85,18 +79,11 @@ function goDetail() {
     <template v-else>
       <div class="collapsed-left">
         <img
-          v-if="thumbnailSrc"
-          :src="thumbnailSrc"
-          class="collapsed-thumb"
-          @error="($event.target as HTMLImageElement).style.display = 'none'"
-        />
-        <img
-          v-else-if="showDefaultThumb"
-          :src="placeholderSrc"
+          :src="thumbnailSrc || placeholderSrc"
           class="collapsed-thumb"
           alt=""
+          @error="onThumbError"
         />
-        <el-icon v-else :size="20" color="var(--text-secondary)"><Picture /></el-icon>
       </div>
       <span class="collapsed-date">{{ formattedDate }}</span>
       <span v-if="item.preview_text" class="collapsed-text">{{ item.preview_text }}</span>
@@ -149,12 +136,6 @@ function goDetail() {
   object-fit: cover;
 }
 
-.card-thumb.placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 120px;
-}
 
 .media-badge {
   position: absolute;

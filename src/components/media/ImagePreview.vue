@@ -8,7 +8,7 @@ const props = withDefaults(
     alt?: string
     clickable?: boolean
   }>(),
-  { alt: '', clickable: true },
+  { alt: '', clickable: true }
 )
 
 const showOverlay = ref(false)
@@ -21,7 +21,7 @@ function handleClick() {
     scale.value = 1
   }
 }
-
+console.log('broken', props, 12)
 function zoomIn() {
   scale.value = Math.min(scale.value + 0.25, 4)
 }
@@ -52,7 +52,11 @@ function closeOverlay() {
 
     <teleport to="body">
       <transition name="overlay-fade">
-        <div v-if="showOverlay" class="fullscreen-overlay" @click.self="closeOverlay">
+        <div
+          v-if="showOverlay"
+          class="fullscreen-overlay"
+          @click.self="closeOverlay"
+        >
           <div class="overlay-controls">
             <el-button :icon="ZoomIn" circle @click="zoomIn" />
             <el-button :icon="ZoomOut" circle @click="zoomOut" />

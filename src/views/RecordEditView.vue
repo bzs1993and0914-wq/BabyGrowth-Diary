@@ -4,7 +4,12 @@ import { useRoute, useRouter } from 'vue-router'
 import { Plus, Delete } from '@element-plus/icons-vue'
 import { useRecordsStore } from '@/stores/records'
 import { useAuthStore } from '@/stores/auth'
-import { deleteMedia, getMediaUrl, getThumbnailUrl } from '@/api/media'
+import {
+  deleteMedia,
+  buildMediaApiUrl,
+  getMediaUrl,
+  getThumbnailUrl,
+} from '@/api/media'
 import MediaUploader from '@/components/media/MediaUploader.vue'
 import GrowthMetricInput from '@/components/record/GrowthMetricInput.vue'
 import type { MediaEntryResponse, TextEntryInput } from '@/types/api'
@@ -70,7 +75,10 @@ function onMediaUploaded(entry: MediaEntryResponse) {
   pendingPlaceholder.value = false
 }
 
-function onUploadBatchComplete(payload: { attempted: number; succeeded: number }) {
+function onUploadBatchComplete(payload: {
+  attempted: number
+  succeeded: number
+}) {
   if (
     payload.attempted > 0 &&
     payload.succeeded === 0 &&
@@ -210,14 +218,27 @@ function handleCancel() {
             <div class="thumb-wrap">
               <img
                 v-if="m.media_type === 'image'"
-                :src="getThumbnailUrl(m.id)"
+                :src="
+                  m.thumbnail_path ? getThumbnailUrl(m.id) : getMediaUrl(m.id)
+                "
                 :alt="m.description || ''"
+                @error="
+                  (e) => {
+                    ;(e.target as HTMLImageElement).src = getMediaUrl(m.id)
+                  }
+                "
               />
               <div v-else class="video-thumb">
                 <img
                   v-if="m.thumbnail_path"
                   :src="getThumbnailUrl(m.id)"
                   :alt="m.description || ''"
+                  @error="
+                    (e) => {
+                      ;(e.target as HTMLImageElement).onerror = null
+                      ;(e.target as HTMLImageElement).src = getMediaUrl(m.id)
+                    }
+                  "
                 />
                 <span v-else class="video-label">视频</span>
               </div>

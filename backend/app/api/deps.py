@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from fastapi import Depends, HTTPException
+from typing import Optional
+
+from fastapi import Depends, HTTPException, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +12,7 @@ from app.models.user import User
 from app.services.auth_service import user_id_from_token
 
 security = HTTPBearer(auto_error=True)
+security_optional = HTTPBearer(auto_error=False)
 
 
 async def get_db():
@@ -27,6 +30,28 @@ async def get_current_user(
     解析 JWT 获取 user_id，再查库确认用户存在；任何一步失败均返回 401。
     """
     user_id = user_id_from_token(credentials.credentials)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="登录已过期或无效")
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=401, detail="登录已过期或无效")
+    return user
+
+
+async def get_current_user_flexible(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_optional),
+    token: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """FastAPI 依赖项：支持 Bearer header 和 ?token= 查询参数两种认证方式。
+
+    供媒体文件端点使用，允许 <img> 标签通过 URL 查询参数携带 JWT。
+    """
+    jwt = credentials.credentials if credentials else token
+    if not jwt:
+        raise HTTPException(status_code=401, detail="登录已过期或无效")
+    user_id = user_id_from_token(jwt)
     if not user_id:
         raise HTTPException(status_code=401, detail="登录已过期或无效")
     result = await db.execute(select(User).where(User.id == user_id))

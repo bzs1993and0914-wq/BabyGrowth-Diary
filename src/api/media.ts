@@ -1,5 +1,11 @@
 import apiClient from './client'
 import type { MediaEntryResponse, MediaUpdate } from '@/types/api'
+import { getStoredToken } from '@/utils/authToken'
+
+function tokenParam(): string {
+  const t = getStoredToken()
+  return t ? `?token=${encodeURIComponent(t)}` : ''
+}
 
 /**
  * 上传媒体文件到指定记录，超时时间延长至 120 秒以支持大文件上传。
@@ -30,16 +36,22 @@ export function uploadMedia(
   })
 }
 
-/** 返回媒体原文件的完整 URL，供 <img> 或 <video> 的 src 属性直接使用。 */
+/** 返回媒体原文件的完整 URL（含认证 token），供 <img>/<video> 的 src 属性直接使用。 */
 export function getMediaUrl(id: number): string {
   const base = apiClient.defaults.baseURL ?? ''
-  return `${base}/api/media/${id}/file`
+  return `${base}/api/media/${id}/file${tokenParam()}`
 }
 
-/** 返回媒体缩略图的完整 URL，用于列表页快速预览。 */
+/** 返回媒体缩略图的完整 URL（含认证 token），用于列表页快速预览。 */
 export function getThumbnailUrl(id: number): string {
   const base = apiClient.defaults.baseURL ?? ''
-  return `${base}/api/media/${id}/thumbnail`
+  return `${base}/api/media/${id}/thumbnail${tokenParam()}`
+}
+
+/** 根据后端返回的 API 路径（如 /api/media/1/thumbnail）拼接完整 URL 并附加认证 token。 */
+export function buildMediaApiUrl(apiPath: string): string {
+  const base = apiClient.defaults.baseURL ?? ''
+  return `${base}${apiPath}${tokenParam()}`
 }
 
 /** 更新媒体文件的描述或排列顺序。 */

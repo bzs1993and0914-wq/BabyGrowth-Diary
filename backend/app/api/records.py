@@ -109,14 +109,14 @@ async def list_records(
 
     result = await db.execute(query)
     records = result.scalars().all()
-
+    
     items: List[RecordListItem] = []
     for rec in records:
         first_thumb = None
         if rec.media_entries:
             for m in rec.media_entries:
                 if m.thumbnail_path:
-                    first_thumb = m.thumbnail_path
+                    first_thumb = f"/api/media/{m.id}/thumbnail"
                     break
 
         preview = None

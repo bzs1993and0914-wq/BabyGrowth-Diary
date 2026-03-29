@@ -11,7 +11,7 @@ const props = withDefaults(
     textEntries: TextEntryResponse[]
     useDefaultMediaPlaceholder?: boolean
   }>(),
-  { useDefaultMediaPlaceholder: false },
+  { useDefaultMediaPlaceholder: false }
 )
 
 const placeholderSrc = '/default-growth-placeholder.svg'
@@ -25,22 +25,22 @@ const gridClass = computed(() => {
   if (n <= 6) return 'grid-6'
   return 'grid-9'
 })
+
+console.log('mediaEntries', props, 123)
 </script>
 
 <template>
   <div class="diary-view">
     <!-- 无媒体：仅默认图占位 -->
-    <template
-      v-if="mediaEntries.length === 0 && useDefaultMediaPlaceholder"
-    >
+    <template v-if="mediaEntries.length === 0 && useDefaultMediaPlaceholder">
       <div class="media-frame placeholder-frame">
-        <img :src="placeholderSrc" alt="宝宝成长曲线默认配图" class="placeholder-img" />
+        <img
+          :src="placeholderSrc"
+          alt="宝宝成长曲线默认配图"
+          class="placeholder-img"
+        />
       </div>
-      <div
-        v-for="text in textEntries"
-        :key="text.id"
-        class="text-block"
-      >
+      <div v-for="text in textEntries" :key="text.id" class="text-block">
         <p class="diary-text">{{ text.content }}</p>
       </div>
     </template>
@@ -49,11 +49,7 @@ const gridClass = computed(() => {
     <template
       v-else-if="mediaEntries.length === 0 && !useDefaultMediaPlaceholder"
     >
-      <div
-        v-for="text in textEntries"
-        :key="text.id"
-        class="text-block"
-      >
+      <div v-for="text in textEntries" :key="text.id" class="text-block">
         <p class="diary-text">{{ text.content }}</p>
       </div>
     </template>
@@ -74,14 +70,12 @@ const gridClass = computed(() => {
               :poster="media.thumbnail_path ? getThumbnailUrl(media.id) : ''"
             />
           </div>
-          <p v-if="media.description" class="media-caption">{{ media.description }}</p>
+          <p v-if="media.description" class="media-caption">
+            {{ media.description }}
+          </p>
         </div>
       </div>
-      <div
-        v-for="text in textEntries"
-        :key="text.id"
-        class="text-block"
-      >
+      <div v-for="text in textEntries" :key="text.id" class="text-block">
         <p class="diary-text">{{ text.content }}</p>
       </div>
     </template>
@@ -105,12 +99,11 @@ const gridClass = computed(() => {
             :poster="media.thumbnail_path ? getThumbnailUrl(media.id) : ''"
           />
         </div>
-        <p v-if="media.description" class="media-caption">{{ media.description }}</p>
+        <p v-if="media.description" class="media-caption">
+          {{ media.description }}
+        </p>
 
-        <div
-          v-if="textEntries[idx]"
-          class="text-block"
-        >
+        <div v-if="textEntries[idx]" class="text-block">
           <p class="diary-text">{{ textEntries[idx].content }}</p>
         </div>
       </div>
