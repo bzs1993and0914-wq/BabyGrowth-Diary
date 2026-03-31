@@ -14,7 +14,7 @@ const props = withDefaults(
   { useDefaultMediaPlaceholder: false }
 )
 
-const placeholderSrc = '/default-growth-placeholder.svg'
+const placeholderSrc = `${import.meta.env.BASE_URL}default-growth-placeholder.svg`
 
 const multiMedia = computed(() => props.mediaEntries.length > 1)
 const gridClass = computed(() => {

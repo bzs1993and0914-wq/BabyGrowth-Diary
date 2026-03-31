@@ -14,7 +14,7 @@ const props = defineProps<{
 
 const router = useRouter()
 
-const placeholderSrc = '/default-growth-placeholder.svg'
+const placeholderSrc = `${import.meta.env.BASE_URL}default-growth-placeholder.svg`
 
 const thumbnailSrc = computed(() => {
   if (!props.item.first_thumbnail) return ''
@@ -58,7 +58,9 @@ function onThumbError(e: Event) {
 
       <div class="card-body">
         <div class="card-date">{{ formattedDate }}</div>
-        <p v-if="item.preview_text" class="card-text">{{ item.preview_text }}</p>
+        <p v-if="item.preview_text" class="card-text">
+          {{ item.preview_text }}
+        </p>
         <div class="card-meta">
           <span v-if="item.media_count" class="meta-item">
             <el-icon><Picture /></el-icon> {{ item.media_count }}张
@@ -67,7 +69,9 @@ function onThumbError(e: Event) {
             <el-icon><VideoCamera /></el-icon> {{ item.text_count }}条文字
           </span>
           <MilestoneMarker
-            v-if="item.has_milestone && item.milestone_name && item.milestone_icon"
+            v-if="
+              item.has_milestone && item.milestone_name && item.milestone_icon
+            "
             :name="item.milestone_name"
             :icon="item.milestone_icon"
             category-name=""
@@ -86,7 +90,9 @@ function onThumbError(e: Event) {
         />
       </div>
       <span class="collapsed-date">{{ formattedDate }}</span>
-      <span v-if="item.preview_text" class="collapsed-text">{{ item.preview_text }}</span>
+      <span v-if="item.preview_text" class="collapsed-text">{{
+        item.preview_text
+      }}</span>
       <span class="collapsed-meta">{{ item.media_count }}张</span>
       <MilestoneMarker
         v-if="item.has_milestone && item.milestone_name && item.milestone_icon"
@@ -135,7 +141,6 @@ function onThumbError(e: Event) {
   height: 100%;
   object-fit: cover;
 }
-
 
 .media-badge {
   position: absolute;

@@ -4,3 +4,4 @@ dist-electron
 backend/dist
 backend/.venv
 release
+.DS_Store
