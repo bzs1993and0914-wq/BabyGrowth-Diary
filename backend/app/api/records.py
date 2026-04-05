@@ -31,6 +31,13 @@ from app.services.storage_manager import cleanup_media_files
 router = APIRouter(prefix="/records", tags=["records"])
 
 
+def _response_use_default_media_placeholder(record: DailyRecord) -> bool:
+    """列表/详情 JSON：无媒体、或仅有媒体但均无可展示缩略图时，为 True（时间轴/日记可走默认配图）。"""
+    if len(record.media_entries) == 0:
+        return True
+    return not any(m.thumbnail_path for m in record.media_entries)
+
+
 @router.get("/", response_model=RecordListResponse)
 async def list_records(
     current_user: User = Depends(get_current_user),
@@ -128,7 +135,7 @@ async def list_records(
             media_count=len(rec.media_entries),
             text_count=len(rec.text_entries),
             first_thumbnail=first_thumb,
-            use_default_media_placeholder=rec.use_default_media_placeholder,
+            use_default_media_placeholder=_response_use_default_media_placeholder(rec),
             has_milestone=rec.milestone is not None,
             milestone_name=rec.milestone.name if rec.milestone else None,
             milestone_icon=(
@@ -335,7 +342,7 @@ def _build_record_response(record) -> RecordResponse:
         date=record.date,
         created_at=record.created_at,
         updated_at=record.updated_at,
-        use_default_media_placeholder=record.use_default_media_placeholder,
+        use_default_media_placeholder=_response_use_default_media_placeholder(record),
         media_entries=[MediaEntryResponse.model_validate(m) for m in record.media_entries],
         text_entries=[TextEntryResponse.model_validate(t) for t in record.text_entries],
         milestone=milestone_info,

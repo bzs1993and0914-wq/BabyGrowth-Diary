@@ -103,6 +103,17 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* 底部菜单等：锁定挂载根滚动；与 AppHeader 内联 top 配合，保持打开抽屉前的视口位置 */
+#app.app-scroll-lock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
+  overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
 a {
   color: var(--color-primary);
   text-decoration: none;

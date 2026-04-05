@@ -21,7 +21,6 @@ const store = useRecordsStore()
 const auth = useAuthStore()
 
 const tierCap = computed(() => (auth.user?.account_tier === 'vip' ? 9 : 1))
-const pendingPlaceholder = ref(false)
 
 const isNew = computed(
   () => route.params.date === undefined || route.name === 'record-new'
@@ -48,7 +47,6 @@ onMounted(async () => {
           sort_order: t.sort_order,
         }))
         uploadedMedia.value = [...rec.media_entries]
-        pendingPlaceholder.value = rec.use_default_media_placeholder ?? false
       }
     } catch {
       ElMessage.error('加载记录失败')
@@ -72,20 +70,6 @@ function removeText(idx: number) {
 
 function onMediaUploaded(entry: MediaEntryResponse) {
   uploadedMedia.value.push(entry)
-  pendingPlaceholder.value = false
-}
-
-function onUploadBatchComplete(payload: {
-  attempted: number
-  succeeded: number
-}) {
-  if (
-    payload.attempted > 0 &&
-    payload.succeeded === 0 &&
-    uploadedMedia.value.length === 0
-  ) {
-    pendingPlaceholder.value = true
-  }
 }
 
 async function handleDeleteMedia(media: MediaEntryResponse) {
@@ -132,7 +116,6 @@ async function handleSave() {
       const rec = await store.saveRecord({
         date: recordDate.value,
         texts: validTexts,
-        use_default_media_placeholder: false,
       })
       recordId.value = rec.id
       ElMessage.success('记录已创建')
@@ -140,7 +123,6 @@ async function handleSave() {
     } else {
       await store.editRecord(recordDate.value, {
         texts: validTexts,
-        use_default_media_placeholder: pendingPlaceholder.value,
       })
       ElMessage.success('记录已更新')
       router.push(`/record/${recordDate.value}`)
@@ -210,7 +192,6 @@ function handleCancel() {
           :max-per-record="tierCap"
           :existing-media-count="uploadedMedia.length"
           @uploaded="onMediaUploaded"
-          @upload-batch-complete="onUploadBatchComplete"
         />
 
         <div v-if="uploadedMedia.length" class="media-grid">

@@ -1,17 +1,56 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { spawn, ChildProcess } from 'child_process'
+import http from 'http'
 
 let mainWindow: BrowserWindow | null = null
 let pythonProcess: ChildProcess | null = null
 
 const isDev = !app.isPackaged
 
+const BACKEND_PORT = 18900
+const DEV_BACKEND_HEALTH_URL = `http://127.0.0.1:${BACKEND_PORT}/api/health`
+
+/** npm run dev 已由 concurrently 启动 uvicorn 时，避免再启一个进程争抢同一 SQLite 库。 */
+function waitForExistingDevBackend(
+  maxWaitMs: number,
+  intervalMs: number
+): Promise<boolean> {
+  const deadline = Date.now() + maxWaitMs
+  const tryOnce = (): Promise<boolean> =>
+    new Promise((resolve) => {
+      const req = http.get(DEV_BACKEND_HEALTH_URL, (res) => {
+        resolve(res.statusCode === 200)
+      })
+      req.on('error', () => resolve(false))
+      req.setTimeout(400, () => {
+        req.destroy()
+        resolve(false)
+      })
+    })
+  return new Promise((resolve) => {
+    const poll = (): void => {
+      void tryOnce().then((ok) => {
+        if (ok) {
+          resolve(true)
+          return
+        }
+        if (Date.now() >= deadline) {
+          resolve(false)
+          return
+        }
+        setTimeout(poll, intervalMs)
+      })
+    }
+    poll()
+  })
+}
+
 function startPythonBackend(): void {
   if (isDev) {
     pythonProcess = spawn(
       'uvicorn',
-      ['app.main:app', '--reload', '--port', '18900'],
+      ['app.main:app', '--reload', `--port`, String(BACKEND_PORT)],
       {
         cwd: join(__dirname, '..', 'backend'),
         shell: true,
@@ -71,8 +110,22 @@ function createWindow(): void {
   })
 }
 
-app.whenReady().then(() => {
-  startPythonBackend()
+app.whenReady().then(async () => {
+  if (isDev) {
+    const alreadyUp = await waitForExistingDevBackend(15000, 250)
+    if (alreadyUp) {
+      console.log(
+        '[Backend] 开发模式下检测到端口',
+        BACKEND_PORT,
+        '已有健康实例，跳过 Electron 内嵌 uvicorn（避免双进程锁库）'
+      )
+    } else {
+      startPythonBackend()
+    }
+  } else {
+    startPythonBackend()
+  }
+
   createWindow()
 
   app.on('activate', () => {

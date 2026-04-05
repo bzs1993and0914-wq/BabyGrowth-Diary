@@ -31,12 +31,14 @@ app = FastAPI(
     title="BabyGrow API",
     version=VERSION,
     lifespan=lifespan,
+    redirect_slashes=False,
 )
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    # JWT 在 Authorization 头；与 allow_origins=["*"] 同时使用时浏览器规范要求 credentials=False
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

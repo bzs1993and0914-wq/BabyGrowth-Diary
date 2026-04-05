@@ -14,13 +14,20 @@ const props = defineProps<{
 
 const router = useRouter()
 
-const placeholderSrc = `${import.meta.env.BASE_URL}default-growth-placeholder.svg`
+const placeholderSrc = `${import.meta.env.BASE_URL}default-growth-placeholder.jpg`
 
+/** 列表缩略图：有附件用首图；无附件且开启占位则用默认图；否则空白（与 use_default_media_placeholder 一致） */
 const thumbnailSrc = computed(() => {
   if (!props.item.first_thumbnail) return ''
   return props.item.first_thumbnail.startsWith('http')
     ? props.item.first_thumbnail
     : buildMediaApiUrl(props.item.first_thumbnail)
+})
+
+const cardThumbSrc = computed(() => {
+  if (thumbnailSrc.value) return thumbnailSrc.value
+  if (props.item.use_default_media_placeholder) return placeholderSrc
+  return ''
 })
 
 const formattedDate = computed(() => {
@@ -35,7 +42,11 @@ function goDetail() {
 
 function onThumbError(e: Event) {
   const img = e.target as HTMLImageElement
-  img.src = placeholderSrc
+  if (props.item.use_default_media_placeholder) {
+    img.src = placeholderSrc
+  } else {
+    img.removeAttribute('src')
+  }
   img.onerror = null
 }
 </script>
@@ -43,13 +54,17 @@ function onThumbError(e: Event) {
 <template>
   <div :class="['timeline-card', layout]" @click="goDetail">
     <template v-if="layout === 'flat'">
-      <div class="card-thumb">
+      <div class="card-thumb" :class="{ 'card-thumb--empty': !cardThumbSrc }">
         <img
-          :src="thumbnailSrc || placeholderSrc"
+          v-if="cardThumbSrc"
+          :src="cardThumbSrc"
           alt="缩略图"
           class="default-thumb"
           @error="onThumbError"
         />
+        <div v-else class="thumb-empty" aria-hidden="true">
+          <el-icon :size="28"><Picture /></el-icon>
+        </div>
         <span v-if="item.media_count > 1" class="media-badge">
           <el-icon><Picture /></el-icon>
           {{ item.media_count }}
@@ -81,13 +96,20 @@ function onThumbError(e: Event) {
     </template>
 
     <template v-else>
-      <div class="collapsed-left">
+      <div
+        class="collapsed-left"
+        :class="{ 'collapsed-left--empty': !cardThumbSrc }"
+      >
         <img
-          :src="thumbnailSrc || placeholderSrc"
+          v-if="cardThumbSrc"
+          :src="cardThumbSrc"
           class="collapsed-thumb"
           alt=""
           @error="onThumbError"
         />
+        <div v-else class="collapsed-thumb-empty" aria-hidden="true">
+          <el-icon :size="22"><Picture /></el-icon>
+        </div>
       </div>
       <span class="collapsed-date">{{ formattedDate }}</span>
       <span v-if="item.preview_text" class="collapsed-text">{{
@@ -140,6 +162,16 @@ function onThumbError(e: Event) {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.thumb-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  opacity: 0.45;
 }
 
 .media-badge {
@@ -224,6 +256,16 @@ function onThumbError(e: Event) {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.collapsed-thumb-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  opacity: 0.45;
 }
 
 .collapsed-date {

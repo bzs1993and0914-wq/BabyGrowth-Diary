@@ -14,7 +14,7 @@ const props = withDefaults(
   { useDefaultMediaPlaceholder: false }
 )
 
-const placeholderSrc = `${import.meta.env.BASE_URL}default-growth-placeholder.svg`
+const placeholderSrc = `${import.meta.env.BASE_URL}default-growth-placeholder.jpg`
 
 const multiMedia = computed(() => props.mediaEntries.length > 1)
 const gridClass = computed(() => {
@@ -25,8 +25,6 @@ const gridClass = computed(() => {
   if (n <= 6) return 'grid-6'
   return 'grid-9'
 })
-
-console.log('mediaEntries', props, 123)
 </script>
 
 <template>

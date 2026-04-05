@@ -8,7 +8,7 @@ import type {
 
 /** 为指定每日记录创建里程碑（每条记录只能有一个）。 */
 export function createMilestone(data: MilestoneCreate) {
-  return apiClient.post<MilestoneResponse>('/api/milestones', data)
+  return apiClient.post<MilestoneResponse>('/api/milestones/', data)
 }
 
 /** 删除里程碑记录。 */

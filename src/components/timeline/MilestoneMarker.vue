@@ -41,7 +41,7 @@ const iconMap: Record<string, string> = {
 }
 
 .marker-name {
-  max-width: 120px;
+  max-width: 155px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
