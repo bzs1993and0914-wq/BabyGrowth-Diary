@@ -52,7 +52,14 @@ function onThumbError(e: Event) {
 </script>
 
 <template>
-  <div :class="['timeline-card', layout]" @click="goDetail">
+  <div
+    :class="[
+      'timeline-card',
+      layout,
+      item.allergy_notes ? 'timeline-card--allergy' : '',
+    ]"
+    @click="goDetail"
+  >
     <template v-if="layout === 'flat'">
       <div class="card-thumb" :class="{ 'card-thumb--empty': !cardThumbSrc }">
         <img
@@ -72,6 +79,9 @@ function onThumbError(e: Event) {
       </div>
 
       <div class="card-body">
+        <div v-if="item.allergy_notes" class="allergy-banner">
+          ⚠️ 过敏：{{ item.allergy_notes }}
+        </div>
         <div class="card-date">{{ formattedDate }}</div>
         <p v-if="item.preview_text" class="card-text">
           {{ item.preview_text }}
@@ -111,6 +121,9 @@ function onThumbError(e: Event) {
           <el-icon :size="22"><Picture /></el-icon>
         </div>
       </div>
+      <span v-if="item.allergy_notes" class="collapsed-allergy" title="含过敏提示"
+        >⚠️</span
+      >
       <span class="collapsed-date">{{ formattedDate }}</span>
       <span v-if="item.preview_text" class="collapsed-text">{{
         item.preview_text
@@ -143,6 +156,28 @@ function onThumbError(e: Event) {
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.timeline-card--allergy.flat {
+  box-shadow: 0 0 0 2px #ff7043, 0 2px 8px var(--shadow-color);
+}
+
+.allergy-banner {
+  font-size: 13px;
+  font-weight: 600;
+  color: #bf360c;
+  background: linear-gradient(90deg, #ffe0b2, #fff3e0);
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  line-height: 1.4;
+  border-left: 4px solid #e64a19;
+}
+
+.collapsed-allergy {
+  color: #e64a19;
+  font-size: 14px;
+  flex-shrink: 0;
 }
 
 .timeline-card.flat:hover {

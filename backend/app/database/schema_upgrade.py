@@ -25,3 +25,5 @@ def upgrade_schema_sync(conn) -> None:
                     "INTEGER NOT NULL DEFAULT 0"
                 )
             )
+        if "allergy_notes" not in cols:
+            conn.execute(text("ALTER TABLE daily_records ADD COLUMN allergy_notes TEXT"))

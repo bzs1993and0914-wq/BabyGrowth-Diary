@@ -113,6 +113,11 @@ onUnmounted(() => {
 
 <template>
   <div class="timeline-view">
+    <div class="home-entry-bar">
+      <router-link class="allergy-entry-link" to="/allergy-records">
+        ⚠️ 查看过敏记录
+      </router-link>
+    </div>
     <TimelineFilter
       :granularity="store.timeline.granularity"
       :layout="store.timeline.layout"
@@ -176,6 +181,30 @@ onUnmounted(() => {
 <style scoped>
 .timeline-view {
   min-height: 60vh;
+}
+
+.home-entry-bar {
+  margin-bottom: 12px;
+}
+
+.allergy-entry-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #bf360c;
+  background: linear-gradient(135deg, #ffe0b2, #ffccbc);
+  text-decoration: none;
+  border: 1px solid #ff8a65;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.allergy-entry-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(230, 74, 25, 0.25);
 }
 
 .day-grid.flat {

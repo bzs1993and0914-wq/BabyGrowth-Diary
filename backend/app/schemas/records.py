@@ -15,11 +15,13 @@ class RecordCreate(BaseModel):
     date: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$")
     texts: List[TextEntryInput] = []
     use_default_media_placeholder: bool = False
+    allergy_notes: Optional[str] = None
 
 
 class RecordUpdate(BaseModel):
     texts: List[TextEntryInput] = []
     use_default_media_placeholder: Optional[bool] = None
+    allergy_notes: Optional[str] = None
 
 
 class MediaEntryResponse(BaseModel):
@@ -73,6 +75,7 @@ class RecordResponse(BaseModel):
     created_at: str
     updated_at: str
     use_default_media_placeholder: bool = False
+    allergy_notes: Optional[str] = None
     media_entries: List[MediaEntryResponse] = []
     text_entries: List[TextEntryResponse] = []
     milestone: Optional[MilestoneInfo] = None
@@ -87,6 +90,7 @@ class RecordListItem(BaseModel):
     text_count: int = 0
     first_thumbnail: Optional[str] = None
     use_default_media_placeholder: bool = False
+    allergy_notes: Optional[str] = None
     has_milestone: bool = False
     milestone_name: Optional[str] = None
     milestone_icon: Optional[str] = None

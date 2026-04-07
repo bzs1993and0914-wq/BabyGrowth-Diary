@@ -6,9 +6,11 @@ alwaysApply: true
 
 # 03-21 Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-21
+Auto-generated from all feature plans. Last updated: 2026-04-05
 
 ## Active Technologies
+- Python 3.11+（后端）、TypeScript 5.x（前端/Electron 主进程） + FastAPI 0.115+、SQLAlchemy 2.0、Pydantic v2、Electron 33+、Vue 3.5+、Element Plus 2.9+、Pinia 2.x、Vite (003-record-allergy-tray-reminders)
+- SQLite（结构化数据）；用户偏好/提醒去重可存本地 JSON（`electron-store` 或 `app.getPath('userData')` 下文件） (003-record-allergy-tray-reminders)
 
 - TypeScript 5.x (Electron/Vue), Python 3.11+ (Backend) + Electron 33+, Vue 3.5+, Element Plus 2.9+, Pinia 2.x, vue-router 4.x, axios; FastAPI 0.115+, SQLAlchemy 2.0, Pydantic v2, Pillow 11+, ffmpeg-python, pillow-heif, aiosqlite (001-baby-growth-timeline)
 
@@ -28,6 +30,7 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 TypeScript 5.x (Electron/Vue), Python 3.11+ (Backend): Follow standard conventions
 
 ## Recent Changes
+- 003-record-allergy-tray-reminders: Added Python 3.11+（后端）、TypeScript 5.x（前端/Electron 主进程） + FastAPI 0.115+、SQLAlchemy 2.0、Pydantic v2、Electron 33+、Vue 3.5+、Element Plus 2.9+、Pinia 2.x、Vite
 
 - 001-baby-growth-timeline: Added TypeScript 5.x (Electron/Vue), Python 3.11+ (Backend) + Electron 33+, Vue 3.5+, Element Plus 2.9+, Pinia 2.x, vue-router 4.x, axios; FastAPI 0.115+, SQLAlchemy 2.0, Pydantic v2, Pillow 11+, ffmpeg-python, pillow-heif, aiosqlite
 

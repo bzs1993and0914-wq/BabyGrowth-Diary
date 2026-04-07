@@ -82,6 +82,11 @@ function onMilestoneSaved() {
         </div>
       </div>
 
+      <div v-if="record.allergy_notes" class="allergy-alert">
+        <strong>⚠️ 宝宝过敏食物</strong>
+        <p>{{ record.allergy_notes }}</p>
+      </div>
+
       <div v-if="record.milestone" class="milestone-section">
         <MilestoneMarker
           :name="record.milestone.name || ''"
@@ -151,6 +156,29 @@ function onMilestoneSaved() {
 .detail-actions {
   display: flex;
   gap: 8px;
+}
+
+.allergy-alert {
+  background: linear-gradient(135deg, #ffe0b2, #ffccbc);
+  border: 1px solid #ff8a65;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.allergy-alert strong {
+  display: block;
+  font-size: 15px;
+  color: #bf360c;
+  margin-bottom: 8px;
+}
+
+.allergy-alert p {
+  margin: 0;
+  font-size: 14px;
+  color: #5d4037;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .milestone-section {

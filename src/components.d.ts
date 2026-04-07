@@ -9,6 +9,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AppHeader: typeof import('./components/common/AppHeader.vue')['default']
+    BabyBgSvg: typeof import('./components/BabyBgSvg.vue')['default']
     DiaryView: typeof import('./components/record/DiaryView.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElButtonGroup: typeof import('element-plus/es')['ElButtonGroup']
@@ -47,5 +48,6 @@ declare module 'vue' {
     TimelineFilter: typeof import('./components/timeline/TimelineFilter.vue')['default']
     TimelineGroup: typeof import('./components/timeline/TimelineGroup.vue')['default']
     VideoPlayer: typeof import('./components/media/VideoPlayer.vue')['default']
+    VideoThumbnailPreview: typeof import('./components/media/VideoThumbnailPreview.vue')['default']
   }
 }

@@ -14,32 +14,33 @@
     "test": "vitest"
   },
   "dependencies": {
-    "vue": "^3.5",
-    "vue-router": "^4",
-    "pinia": "^2",
-    "element-plus": "^2.9",
-    "axios": "^1",
     "@element-plus/icons-vue": "^2",
+    "axios": "^1",
     "echarts": "^5",
-    "vue-echarts": "^7"
+    "electron-store": "^8.2.0",
+    "element-plus": "^2.9",
+    "pinia": "^2",
+    "vue": "^3.5",
+    "vue-echarts": "^7",
+    "vue-router": "^4"
   },
   "devDependencies": {
-    "typescript": "^5",
-    "vite": "^6",
+    "@typescript-eslint/eslint-plugin": "^8",
+    "@typescript-eslint/parser": "^8",
     "@vitejs/plugin-vue": "^5",
+    "concurrently": "^9",
     "electron": "^33",
     "electron-builder": "^25",
-    "vue-tsc": "^2",
-    "vitest": "^3",
-    "concurrently": "^9",
-    "wait-on": "^8",
     "eslint": "^9",
     "prettier": "^3",
-    "@typescript-eslint/parser": "^8",
-    "@typescript-eslint/eslint-plugin": "^8",
+    "typescript": "^5",
     "unplugin-auto-import": "^19",
     "unplugin-vue-components": "^28",
+    "vite": "^6",
     "vite-plugin-electron": "^0.28",
-    "vite-plugin-electron-renderer": "^0.14"
+    "vite-plugin-electron-renderer": "^0.14",
+    "vitest": "^3",
+    "vue-tsc": "^2",
+    "wait-on": "^8"
   }
 }

@@ -5,7 +5,7 @@ from typing import Optional
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -166,7 +166,7 @@ async def serve_file(
     current_user: User = Depends(get_current_user_flexible),
     db: AsyncSession = Depends(get_db),
 ):
-    """以流式响应提供原始媒体文件（图片/视频），按 1MB 分块传输以降低内存占用。"""
+    """提供原始媒体文件。使用 FileResponse 以支持 HTTP Range，便于 <video> 拖拽进度条与跳转。"""
     result = await db.execute(select(MediaEntry).where(MediaEntry.id == media_id))
     entry = result.scalars().first()
     if not entry:
@@ -206,16 +206,8 @@ async def serve_file(
             f"filename*=UTF-8''{quote(download_name)}"
         )
 
-    def _iter_file():
-        with open(full_path, "rb") as f:
-            while True:
-                chunk = f.read(1024 * 1024)
-                if not chunk:
-                    break
-                yield chunk
-
-    return StreamingResponse(
-        _iter_file(),
+    return FileResponse(
+        path=full_path,
         media_type=content_type,
         headers={"Content-Disposition": content_disposition},
     )

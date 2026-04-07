@@ -65,13 +65,13 @@ def extract_exif_date(file_path: Path) -> Optional[str]:
 
 
 def generate_video_thumbnail(input_path: Path, output_path: Path) -> bool:
-    """截取视频第 1 秒处的帧作为缩略图，宽度缩放为 400px，依赖 ffmpeg-python。"""
+    """截取视频第一帧作为缩略图，宽度缩放为 400px，依赖 ffmpeg-python。"""
     try:
         import ffmpeg
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         (
-            ffmpeg.input(str(input_path), ss=1)
+            ffmpeg.input(str(input_path), ss=0)
             .filter("scale", 400, -1)
             .output(str(output_path), vframes=1)
             .overwrite_output()

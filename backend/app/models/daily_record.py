@@ -26,6 +26,7 @@ class DailyRecord(Base):
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
     use_default_media_placeholder: Mapped[bool] = mapped_column(default=False, nullable=False)
+    allergy_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[str] = mapped_column(
         Text, default=lambda: datetime.now().isoformat()
     )

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { MediaEntryResponse, TextEntryResponse } from '@/types/api'
-import { getMediaUrl, getThumbnailUrl } from '@/api/media'
+import { getMediaUrl } from '@/api/media'
 import ImagePreview from '@/components/media/ImagePreview.vue'
-import VideoPlayer from '@/components/media/VideoPlayer.vue'
+import VideoThumbnailPreview from '@/components/media/VideoThumbnailPreview.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -62,11 +62,7 @@ const gridClass = computed(() => {
               :src="getMediaUrl(media.id)"
               :alt="media.description || media.original_filename || ''"
             />
-            <VideoPlayer
-              v-else
-              :src="getMediaUrl(media.id)"
-              :poster="media.thumbnail_path ? getThumbnailUrl(media.id) : ''"
-            />
+            <VideoThumbnailPreview v-else :media="media" />
           </div>
           <p v-if="media.description" class="media-caption">
             {{ media.description }}
@@ -91,11 +87,7 @@ const gridClass = computed(() => {
             :src="getMediaUrl(media.id)"
             :alt="media.description || media.original_filename || ''"
           />
-          <VideoPlayer
-            v-else
-            :src="getMediaUrl(media.id)"
-            :poster="media.thumbnail_path ? getThumbnailUrl(media.id) : ''"
-          />
+          <VideoThumbnailPreview v-else :media="media" />
         </div>
         <p v-if="media.description" class="media-caption">
           {{ media.description }}

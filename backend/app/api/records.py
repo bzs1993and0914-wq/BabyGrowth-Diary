@@ -5,7 +5,7 @@ from datetime import date as date_type, timedelta
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -26,9 +26,17 @@ from app.schemas.records import (
     RecordUpdate,
     TextEntryResponse,
 )
+from app.services.record_date_validation import assert_record_date_not_after_today
 from app.services.storage_manager import cleanup_media_files
 
 router = APIRouter(prefix="/records", tags=["records"])
+
+
+def _normalize_allergy_notes(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    stripped = value.strip()
+    return stripped if stripped else None
 
 
 def _response_use_default_media_placeholder(record: DailyRecord) -> bool:
@@ -49,6 +57,7 @@ async def list_records(
     date_to: Optional[str] = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    has_allergy: Optional[bool] = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
     """分页查询当前用户的每日记录列表，支持按时间粒度、关键词、日期范围、里程碑过滤。
@@ -106,6 +115,14 @@ async def list_records(
             )
         )
 
+    if has_allergy is True:
+        query = query.where(
+            and_(
+                DailyRecord.allergy_notes.isnot(None),
+                func.length(func.trim(DailyRecord.allergy_notes)) > 0,
+            )
+        )
+
     count_query = select(func.count()).select_from(query.subquery())
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
@@ -136,6 +153,7 @@ async def list_records(
             text_count=len(rec.text_entries),
             first_thumbnail=first_thumb,
             use_default_media_placeholder=_response_use_default_media_placeholder(rec),
+            allergy_notes=rec.allergy_notes,
             has_milestone=rec.milestone is not None,
             milestone_name=rec.milestone.name if rec.milestone else None,
             milestone_icon=(
@@ -189,6 +207,8 @@ async def create_record(
     db: AsyncSession = Depends(get_db),
 ):
     """创建新的每日记录（同一用户同一日期只能有一条，重复返回 409）。"""
+    assert_record_date_not_after_today(data.date)
+
     existing = await db.execute(
         select(DailyRecord).where(
             DailyRecord.date == data.date,
@@ -202,6 +222,7 @@ async def create_record(
         date=data.date,
         user_id=current_user.id,
         use_default_media_placeholder=data.use_default_media_placeholder,
+        allergy_notes=_normalize_allergy_notes(data.allergy_notes),
     )
     db.add(record)
     await db.flush()
@@ -238,6 +259,8 @@ async def update_record(
     db: AsyncSession = Depends(get_db),
 ):
     """更新指定日期的记录，采用全量替换策略更新文字列表：不在请求体中的旧条目将被删除。"""
+    assert_record_date_not_after_today(date)
+
     result = await db.execute(
         select(DailyRecord)
         .options(selectinload(DailyRecord.text_entries))
@@ -249,6 +272,10 @@ async def update_record(
     record = result.scalars().first()
     if not record:
         raise HTTPException(status_code=404, detail="Record not found")
+
+    update_payload = data.model_dump(exclude_unset=True)
+    if "allergy_notes" in update_payload:
+        record.allergy_notes = _normalize_allergy_notes(update_payload["allergy_notes"])
 
     existing_ids = {e.id for e in record.text_entries}
     incoming_ids = {t.id for t in data.texts if t.id is not None}
@@ -343,6 +370,7 @@ def _build_record_response(record) -> RecordResponse:
         created_at=record.created_at,
         updated_at=record.updated_at,
         use_default_media_placeholder=_response_use_default_media_placeholder(record),
+        allergy_notes=record.allergy_notes,
         media_entries=[MediaEntryResponse.model_validate(m) for m in record.media_entries],
         text_entries=[TextEntryResponse.model_validate(t) for t in record.text_entries],
         milestone=milestone_info,

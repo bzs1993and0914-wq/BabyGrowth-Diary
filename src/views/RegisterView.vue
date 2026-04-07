@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
+import BabyBgSvg from '@/components/BabyBgSvg.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -45,6 +46,7 @@ async function onSubmit() {
 
 <template>
   <div class="auth-page">
+    <BabyBgSvg />
     <el-card class="auth-card" shadow="never">
       <h1 class="title">注册账号</h1>
       <p class="hint">账号与成长记录仅保存在本机，请妥善保管密码。</p>
@@ -81,18 +83,28 @@ async function onSubmit() {
 
 <style scoped>
 .auth-page {
-  min-height: 100vh;
+  position: relative;
+  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  background: var(--bg-secondary);
+  background: #f8f0f5;
+  overflow: hidden;
 }
 
 .auth-card {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: 400px;
-  border-radius: 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 8px 32px rgba(180, 140, 160, 0.12),
+    0 2px 8px rgba(180, 140, 160, 0.06);
 }
 
 .title {

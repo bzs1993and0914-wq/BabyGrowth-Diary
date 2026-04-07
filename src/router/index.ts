@@ -23,6 +23,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/allergy-records',
+      name: 'allergy-records',
+      component: () => import('@/views/AllergyRecordsView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/record/new',
       name: 'record-new',
       component: () => import('@/views/RecordEditView.vue'),

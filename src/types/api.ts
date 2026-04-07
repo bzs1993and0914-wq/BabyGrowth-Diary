@@ -9,6 +9,7 @@ export interface RecordListParams {
   date_to?: string
   page?: number
   page_size?: number
+  has_allergy?: boolean
 }
 
 export interface TextEntryInput {
@@ -21,11 +22,13 @@ export interface RecordCreate {
   date: string
   texts?: TextEntryInput[]
   use_default_media_placeholder?: boolean
+  allergy_notes?: string | null
 }
 
 export interface RecordUpdate {
   texts?: TextEntryInput[]
   use_default_media_placeholder?: boolean
+  allergy_notes?: string | null
 }
 
 export interface AuthUser {
@@ -99,6 +102,7 @@ export interface RecordListItem {
   text_count: number
   first_thumbnail: string | null
   use_default_media_placeholder?: boolean
+  allergy_notes?: string | null
   has_milestone: boolean
   milestone_name: string | null
   milestone_icon: string | null
@@ -169,6 +173,7 @@ export interface RecordResponse {
   created_at: string
   updated_at: string
   use_default_media_placeholder?: boolean
+  allergy_notes?: string | null
   media_entries: MediaEntryResponse[]
   text_entries: TextEntryResponse[]
   milestone: MilestoneInfo | null

@@ -1,7 +1,10 @@
 <template>
   <div id="app-root">
     <AppHeader v-if="!route.meta.hideHeader" />
-    <main class="main-content">
+    <main
+      class="main-content"
+      :class="{ 'main-content--full': route.meta.hideHeader }"
+    >
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <component :is="Component" />
@@ -32,7 +35,7 @@ watch(
   () => auth.isAuthenticated,
   (ok) => {
     if (ok) settingsStore.fetchSettings()
-  },
+  }
 )
 </script>
 
@@ -43,7 +46,9 @@ watch(
   flex-direction: column;
   background: var(--bg-primary);
   color: var(--text-primary);
-  transition: background-color 0.3s, color 0.3s;
+  transition:
+    background-color 0.3s,
+    color 0.3s;
 }
 
 .main-content {
@@ -53,6 +58,11 @@ watch(
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
+}
+
+.main-content--full {
+  padding: 0;
+  max-width: none;
 }
 
 .fade-enter-active,

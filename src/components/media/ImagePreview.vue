@@ -21,7 +21,7 @@ function handleClick() {
     scale.value = 1
   }
 }
-console.log('broken', props, 12)
+
 function zoomIn() {
   scale.value = Math.min(scale.value + 0.25, 4)
 }
