@@ -28,7 +28,8 @@
     <rect width="1440" height="900" fill="url(#bgGlow3)" />
 
     <!-- ========== 左上角：泰迪熊 ========== -->
-    <g transform="translate(90,100) scale(0.9)" opacity="0.82">
+    <g class="baby-float baby-float--1">
+      <g transform="translate(90,100) scale(0.9)" opacity="0.82">
       <!-- 耳朵 -->
       <circle cx="30" cy="20" r="18" fill="#f5d5c0" stroke="#e8b89e" stroke-width="2" />
       <circle cx="30" cy="20" r="9" fill="#f9c4a8" />
@@ -53,10 +54,12 @@
       <circle cx="60" cy="82" r="4" fill="#ff9ab5" />
       <!-- 身体 -->
       <ellipse cx="60" cy="116" rx="32" ry="28" fill="#f5d5c0" stroke="#e8b89e" stroke-width="2" />
+      </g>
     </g>
 
     <!-- ========== 右上角：奶瓶 ========== -->
-    <g transform="translate(1200,60) rotate(15)" opacity="0.78">
+    <g class="baby-float baby-float--2">
+      <g transform="translate(1200,60) rotate(15)" opacity="0.78">
       <!-- 瓶身 -->
       <rect x="10" y="40" width="50" height="90" rx="12" fill="#fffde8" stroke="#f0e6a0" stroke-width="2" />
       <!-- 刻度 -->
@@ -72,10 +75,12 @@
       <rect x="15" y="36" width="40" height="8" rx="3" fill="#b8e6d0" stroke="#8fd4b0" stroke-width="1.5" />
       <!-- 把手 -->
       <path d="M60 60 Q80 70 60 100" fill="none" stroke="#e8d88c" stroke-width="5" stroke-linecap="round" />
+      </g>
     </g>
 
     <!-- ========== 左中：摇铃 ========== -->
-    <g transform="translate(60, 440) rotate(-12)" opacity="0.75">
+    <g class="baby-float baby-float--3">
+      <g transform="translate(60, 440) rotate(-12)" opacity="0.75">
       <!-- 手柄 -->
       <rect x="28" y="50" width="10" height="40" rx="5" fill="#ffd6a0" stroke="#f0c080" stroke-width="1.5" />
       <!-- 铃球 -->
@@ -85,10 +90,12 @@
       <circle cx="26" cy="27" r="2.5" fill="#6a5a52" />
       <circle cx="40" cy="27" r="2.5" fill="#6a5a52" />
       <path d="M27 35 Q33 40 39 35" fill="none" stroke="#e08898" stroke-width="1.5" stroke-linecap="round" />
+      </g>
     </g>
 
     <!-- ========== 右下角：另一个奶瓶（小、倾斜） ========== -->
-    <g transform="translate(1250,650) rotate(-25) scale(0.7)" opacity="0.68">
+    <g class="baby-float baby-float--4">
+      <g transform="translate(1250,650) rotate(-25) scale(0.7)" opacity="0.68">
       <rect x="10" y="40" width="50" height="90" rx="12" fill="#fffde8" stroke="#f0e6a0" stroke-width="2" />
       <line x1="18" y1="60" x2="35" y2="60" stroke="#e8d88c" stroke-width="1" />
       <line x1="18" y1="75" x2="30" y2="75" stroke="#e8d88c" stroke-width="1" />
@@ -96,6 +103,7 @@
       <line x1="18" y1="105" x2="30" y2="105" stroke="#e8d88c" stroke-width="1" />
       <path d="M20 40 Q35 10 50 40" fill="#ffd6a0" stroke="#f0c080" stroke-width="2" />
       <rect x="15" y="36" width="40" height="8" rx="3" fill="#a8d8f0" stroke="#88c4e0" stroke-width="1.5" />
+      </g>
     </g>
 
     <!-- ========== 中上：牙胶圈 ========== -->
@@ -107,7 +115,8 @@
     </g>
 
     <!-- ========== 右中：摇铃（另一个） ========== -->
-    <g transform="translate(1300,370) rotate(20) scale(0.8)" opacity="0.7">
+    <g class="baby-float baby-float--5">
+      <g transform="translate(1300,370) rotate(20) scale(0.8)" opacity="0.7">
       <rect x="25" y="55" width="12" height="35" rx="6" fill="#c8e8a0" stroke="#a8d080" stroke-width="1.5" />
       <circle cx="31" cy="32" r="24" fill="#ffe0a0" stroke="#f0cc70" stroke-width="2" />
       <circle cx="31" cy="32" r="14" fill="#fff0c8" />
@@ -116,10 +125,12 @@
       <path d="M25 37 Q31 42 37 37" fill="none" stroke="#d0a060" stroke-width="1.5" stroke-linecap="round" />
       <!-- 星形顶部 -->
       <polygon points="31,2 34,11 43,11 36,17 38,26 31,21 24,26 26,17 19,11 28,11" fill="#ffe880" stroke="#f0d860" stroke-width="1" />
+      </g>
     </g>
 
     <!-- ========== 左下：成长记录本 ========== -->
-    <g transform="translate(160,620) rotate(5)" opacity="0.72">
+    <g class="baby-float baby-float--6">
+      <g transform="translate(160,620) rotate(5)" opacity="0.72">
       <!-- 封面 -->
       <rect x="0" y="0" width="130" height="95" rx="6" fill="#d8ecff" stroke="#b0d0f0" stroke-width="2" />
       <rect x="8" y="8" width="114" height="79" rx="4" fill="#fff" stroke="#dde8f4" stroke-width="1" />
@@ -134,6 +145,7 @@
       <polygon points="80,48 82,54 88,54 83,58 85,64 80,60 75,64 77,58 72,54 78,54" fill="#ffe880" stroke="#f0d860" stroke-width="0.8" />
       <!-- 封面小爱心 -->
       <path d="M90 72 Q90 66 96 66 Q102 66 102 72 Q102 80 96 86 Q90 80 90 72 Z" fill="#ffb0c0" opacity="0.7" />
+      </g>
     </g>
 
     <!-- ========== 散落的小星星 ========== -->
@@ -213,11 +225,62 @@
 <style scoped>
 .baby-bg {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
+  /* 勿用 100vw/100vh：与纵向滚动条并存时易横向溢出、整页微抖 */
   z-index: 0;
   pointer-events: none;
+}
+
+/* 六个主装饰：轻柔上下浮动 + 微摆，时长错开避免同步 */
+.baby-float {
+  transform-box: fill-box;
+  transform-origin: center center;
+  animation: baby-bg-float 3.8s ease-in-out infinite;
+}
+
+.baby-float--1 {
+  animation-duration: 3.8s;
+  animation-delay: 0s;
+}
+
+.baby-float--2 {
+  animation-duration: 4.3s;
+  animation-delay: -0.7s;
+}
+
+.baby-float--3 {
+  animation-duration: 3.5s;
+  animation-delay: -0.4s;
+}
+
+.baby-float--4 {
+  animation-duration: 4.6s;
+  animation-delay: -1.2s;
+}
+
+.baby-float--5 {
+  animation-duration: 4s;
+  animation-delay: -1.8s;
+}
+
+.baby-float--6 {
+  animation-duration: 3.6s;
+  animation-delay: -0.9s;
+}
+
+@keyframes baby-bg-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-13px) rotate(0.9deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .baby-float {
+    animation: none;
+  }
 }
 </style>

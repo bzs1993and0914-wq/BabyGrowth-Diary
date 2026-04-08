@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed, watch } from 'vue'
+import { onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRecordsStore } from '@/stores/records'
 import type { ViewGranularity, LayoutMode } from '@/types/models'
 import type { RecordListItem } from '@/types/api'
@@ -11,10 +11,6 @@ import EmptyState from '@/components/common/EmptyState.vue'
 
 const store = useRecordsStore()
 
-onMounted(() => {
-  store.loadRecords()
-})
-
 watch(
   () => [
     store.timeline.granularity,
@@ -22,6 +18,7 @@ watch(
     store.timeline.dateFrom,
     store.timeline.dateTo,
     store.timeline.milestoneOnly,
+    store.timeline.allergyOnly,
   ],
   () => {
     store.timeline.page = 1
@@ -82,10 +79,6 @@ function handleDateRange(from: string | null, to: string | null) {
   store.setDateRange(from, to)
 }
 
-function handleMilestoneOnly(v: boolean) {
-  store.setMilestoneOnly(v)
-}
-
 function loadMore() {
   if (store.hasMore && !store.loading) {
     store.nextPage()
@@ -102,10 +95,10 @@ function handleScroll() {
 }
 
 onMounted(() => {
+  store.loadRecords()
   window.addEventListener('scroll', handleScroll, { passive: true })
 })
 
-import { onUnmounted } from 'vue'
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
 })
@@ -113,20 +106,15 @@ onUnmounted(() => {
 
 <template>
   <div class="timeline-view">
-    <div class="home-entry-bar">
-      <router-link class="allergy-entry-link" to="/allergy-records">
-        ⚠️ 查看过敏记录
-      </router-link>
-    </div>
     <TimelineFilter
+      v-model:allergy-only="store.timeline.allergyOnly"
+      v-model:milestone-only="store.timeline.milestoneOnly"
       :granularity="store.timeline.granularity"
       :layout="store.timeline.layout"
-      :milestone-only="store.timeline.milestoneOnly"
       @update:granularity="handleGranularity"
       @update:layout="handleLayout"
       @update:search="handleSearch"
       @update:date-range="handleDateRange"
-      @update:milestone-only="handleMilestoneOnly"
     />
 
     <LoadingSkeleton v-if="store.loading && !store.items.length" type="card" :count="4" />
@@ -168,6 +156,15 @@ onUnmounted(() => {
     </template>
 
     <EmptyState
+      v-else-if="store.timeline.allergyOnly"
+      icon="⚠️"
+      title="暂无过敏相关记录"
+      description="在新建或编辑记录时填写「宝宝过敏食物」后，打开「查看过敏记录」即可在此集中浏览"
+      action-text="新建记录"
+      action-route="/record/new"
+    />
+
+    <EmptyState
       v-else
       icon="📷"
       title="还没有记录"
@@ -181,30 +178,6 @@ onUnmounted(() => {
 <style scoped>
 .timeline-view {
   min-height: 60vh;
-}
-
-.home-entry-bar {
-  margin-bottom: 12px;
-}
-
-.allergy-entry-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #bf360c;
-  background: linear-gradient(135deg, #ffe0b2, #ffccbc);
-  text-decoration: none;
-  border: 1px solid #ff8a65;
-  transition: transform 0.15s, box-shadow 0.15s;
-}
-
-.allergy-entry-link:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(230, 74, 25, 0.25);
 }
 
 .day-grid.flat {

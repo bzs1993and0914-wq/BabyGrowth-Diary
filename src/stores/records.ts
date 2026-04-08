@@ -1,7 +1,19 @@
 import { defineStore } from 'pinia'
 import { ref, reactive, computed } from 'vue'
-import { getRecords, getRecord, createRecord, updateRecord, deleteRecord } from '@/api/records'
-import type { RecordListItem, RecordResponse, RecordListParams, RecordCreate, RecordUpdate } from '@/types/api'
+import {
+  getRecords,
+  getRecord,
+  createRecord,
+  updateRecord,
+  deleteRecord,
+} from '@/api/records'
+import type {
+  RecordListItem,
+  RecordResponse,
+  RecordListParams,
+  RecordCreate,
+  RecordUpdate,
+} from '@/types/api'
 import type { TimelineState, ViewGranularity, LayoutMode } from '@/types/models'
 
 export const useRecordsStore = defineStore('records', () => {
@@ -17,6 +29,7 @@ export const useRecordsStore = defineStore('records', () => {
     dateFrom: null,
     dateTo: null,
     milestoneOnly: false,
+    allergyOnly: false,
     page: 1,
     pageSize: 20,
   })
@@ -30,12 +43,24 @@ export const useRecordsStore = defineStore('records', () => {
     try {
       const params: RecordListParams = {
         view: timeline.granularity,
-        milestone_only: timeline.milestoneOnly || undefined,
-        q: timeline.searchQuery || undefined,
-        date_from: timeline.dateFrom ?? undefined,
-        date_to: timeline.dateTo ?? undefined,
         page: timeline.page,
         page_size: timeline.pageSize,
+      }
+      if (timeline.milestoneOnly) {
+        params.milestone_only = true
+      }
+      if (timeline.allergyOnly) {
+        params.has_allergy = true
+      }
+      const q = timeline.searchQuery?.trim()
+      if (q) {
+        params.q = q
+      }
+      if (timeline.dateFrom) {
+        params.date_from = timeline.dateFrom
+      }
+      if (timeline.dateTo) {
+        params.date_to = timeline.dateTo
       }
       const res = (await getRecords(params)).data
       items.value = append ? [...items.value, ...res.items] : res.items
@@ -61,7 +86,10 @@ export const useRecordsStore = defineStore('records', () => {
   }
 
   /** 更新记录并返回最新数据。 */
-  async function editRecord(date: string, data: RecordUpdate): Promise<RecordResponse> {
+  async function editRecord(
+    date: string,
+    data: RecordUpdate
+  ): Promise<RecordResponse> {
     return (await updateRecord(date, data)).data
   }
 
@@ -102,6 +130,12 @@ export const useRecordsStore = defineStore('records', () => {
     timeline.page = 1
   }
 
+  /** 切换「仅显示含过敏提示的记录」过滤，并重置分页到第 1 页。 */
+  function setAllergyOnly(v: boolean) {
+    timeline.allergyOnly = v
+    timeline.page = 1
+  }
+
   /** 翻到下一页（配合 loadRecords(true) 实现"加载更多"）。 */
   function nextPage() {
     timeline.page += 1
@@ -127,6 +161,7 @@ export const useRecordsStore = defineStore('records', () => {
     setSearch,
     setDateRange,
     setMilestoneOnly,
+    setAllergyOnly,
     nextPage,
   }
 })
