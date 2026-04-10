@@ -5,12 +5,14 @@ import {
   Menu,
   nativeImage,
   Notification,
+  dialog,
 } from 'electron'
 import { join } from 'path'
 import { spawn, ChildProcess } from 'child_process'
 import http from 'http'
 import Store from 'electron-store'
 import type { NativeImage } from 'electron'
+import { DAILY_RECORD_NUDGE_HOUR } from '../src/constants/dailyRecordNudge'
 
 let mainWindow: BrowserWindow | null = null
 let pythonProcess: ChildProcess | null = null
@@ -217,25 +219,63 @@ function localDateKey(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
+function showNudgeDialogFallback(message: string): void {
+  const win = mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined
+  if (win) {
+    void dialog.showMessageBox(win, {
+      type: 'info',
+      title: 'BabyGrow',
+      message,
+      buttons: ['知道了'],
+      defaultId: 0,
+    })
+  } else {
+    void dialog.showMessageBox({
+      type: 'info',
+      title: 'BabyGrow',
+      message,
+      buttons: ['知道了'],
+      defaultId: 0,
+    })
+  }
+}
+
 function maybeShowDailyRecordNudge(): void {
   const now = new Date()
-  if (now.getHours() !== 17) {
+  if (now.getHours() !== DAILY_RECORD_NUDGE_HOUR) {
     return
   }
   const key = localDateKey(now)
   if (reminderStore.get('lastDailyRecordNudgeDate') === key) {
     return
   }
-  if (!Notification.isSupported()) {
-    reminderStore.set('lastDailyRecordNudgeDate', key)
-    return
+
+  const body = '该给宝宝创建新的记录啦'
+  const hasWin = !!(mainWindow && !mainWindow.isDestroyed())
+
+  /** 渲染进程内轻提示（应用打开时确保能看见，弥补系统通知未授权或被勿扰屏蔽） */
+  if (hasWin) {
+    mainWindow!.webContents.send('daily-record-nudge', body)
   }
-  const n = new Notification({
-    title: 'BabyGrow',
-    body: '该给宝宝创建新的记录啦',
-  })
-  n.on('click', () => showMainWindow())
-  n.show()
+
+  if (Notification.isSupported()) {
+    try {
+      const n = new Notification({
+        title: 'BabyGrow',
+        body,
+      })
+      n.on('click', () => showMainWindow())
+      n.show()
+    } catch (e) {
+      console.warn('[Nudge] Notification.show failed', e)
+      if (!hasWin) {
+        showNudgeDialogFallback(body)
+      }
+    }
+  } else if (!hasWin) {
+    showNudgeDialogFallback(body)
+  }
+
   reminderStore.set('lastDailyRecordNudgeDate', key)
 }
 

@@ -1,1 +1,1 @@
-"use strict";const e=require("electron");e.contextBridge.exposeInMainWorld("electronAPI",{apiBaseUrl:"http://localhost:18900",platform:process.platform});
+"use strict";const e=require("electron");e.contextBridge.exposeInMainWorld("electronAPI",{apiBaseUrl:"http://localhost:18900",platform:process.platform,onDailyRecordNudge(r){e.ipcRenderer.on("daily-record-nudge",(t,o)=>{r(o)})}});

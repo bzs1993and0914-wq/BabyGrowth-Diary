@@ -25,7 +25,7 @@
 
 | 键 | 类型 | 说明 |
 |----|------|------|
-| `lastDailyRecordNudgeDate` | `string` (`YYYY-MM-DD`) | 已在该本地日展示过 17:00 提醒则不再重复 |
+| `lastDailyRecordNudgeDate` | `string` (`YYYY-MM-DD`) | 已在该本地日展示过 10:00 提醒则不再重复 |
 
 存储位置：Electron `userData`（如 `electron-store` JSON），**不**进入共享 SQLite，避免与多账户/备份策略耦合；若未来需同步再评估。
 

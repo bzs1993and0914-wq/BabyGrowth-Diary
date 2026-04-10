@@ -8,6 +8,11 @@ import TimelineCard from '@/components/timeline/TimelineCard.vue'
 import TimelineGroup from '@/components/timeline/TimelineGroup.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import {
+  formatIsoWeekTitle,
+  getISOWeekData,
+  parseLocalYmd,
+} from '@/utils/timelineGrouping'
 
 const store = useRecordsStore()
 
@@ -33,34 +38,60 @@ interface GroupedItems {
   items: RecordListItem[]
 }
 
+interface GroupBucket {
+  sortKey: number
+  title: string
+  items: RecordListItem[]
+}
+
 const groupedItems = computed<GroupedItems[]>(() => {
   if (!isGrouped.value) return []
-  const groups = new Map<string, RecordListItem[]>()
+  const groups = new Map<string, GroupBucket>()
 
   for (const item of store.items) {
-    const d = new Date(item.date)
-    let key: string
+    const d = parseLocalYmd(item.date)
+    let mapKey: string
+    let title: string
+    let sortKey: number
+
     switch (store.timeline.granularity) {
       case 'week': {
-        const weekStart = new Date(d)
-        weekStart.setDate(d.getDate() - d.getDay())
-        key = `${weekStart.getFullYear()}-W${String(Math.ceil((weekStart.getDate()) / 7 + 1)).padStart(2, '0')}`
+        const { isoYear, isoWeek } = getISOWeekData(d)
+        title = formatIsoWeekTitle(isoYear, isoWeek)
+        mapKey = title
+        sortKey = isoYear * 100 + isoWeek
         break
       }
-      case 'month':
-        key = `${d.getFullYear()}年${d.getMonth() + 1}月`
+      case 'month': {
+        const y = d.getFullYear()
+        const m = d.getMonth() + 1
+        title = `${y}年${m}月`
+        mapKey = `${y}-${String(m).padStart(2, '0')}`
+        sortKey = y * 100 + m
         break
-      case 'year':
-        key = `${d.getFullYear()}年`
+      }
+      case 'year': {
+        const y = d.getFullYear()
+        title = `${y}年`
+        mapKey = String(y)
+        sortKey = y
         break
+      }
       default:
-        key = item.date
+        mapKey = item.date
+        title = item.date
+        sortKey = 0
     }
-    if (!groups.has(key)) groups.set(key, [])
-    groups.get(key)!.push(item)
+
+    if (!groups.has(mapKey)) {
+      groups.set(mapKey, { sortKey, title, items: [] })
+    }
+    groups.get(mapKey)!.items.push(item)
   }
 
-  return Array.from(groups.entries()).map(([title, items]) => ({ title, items }))
+  return Array.from(groups.values())
+    .sort((a, b) => b.sortKey - a.sortKey)
+    .map(({ title, items }) => ({ title, items }))
 })
 
 function handleGranularity(v: ViewGranularity) {

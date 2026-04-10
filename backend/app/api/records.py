@@ -138,7 +138,7 @@ async def list_records(
     for rec in records:
         first_thumb = None
         if rec.media_entries:
-            for m in rec.media_entries:
+            for m in sorted(rec.media_entries, key=lambda x: x.sort_order):
                 if m.thumbnail_path:
                     first_thumb = f"/api/media/{m.id}/thumbnail"
                     break

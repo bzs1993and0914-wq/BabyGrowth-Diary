@@ -9,11 +9,13 @@ import MilestonePicker from '@/components/record/MilestonePicker.vue'
 import GrowthMetricInput from '@/components/record/GrowthMetricInput.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { updateMedia } from '@/api/media'
 
 const route = useRoute()
 const router = useRouter()
 const store = useRecordsStore()
 const showMilestonePicker = ref(false)
+const reorderBusy = ref(false)
 
 const date = computed(() => route.params.date as string)
 
@@ -63,6 +65,43 @@ async function handleDelete() {
 function onMilestoneSaved() {
   store.loadRecord(date.value)
 }
+
+function syncListThumbnailForCurrentDate() {
+  const r = store.currentRecord
+  const d = date.value
+  if (!r || r.date !== d) return
+  const item = store.items.find((i) => i.date === d)
+  if (!item) return
+  let firstThumb: string | null = null
+  for (const m of r.media_entries) {
+    if (m.thumbnail_path) {
+      firstThumb = `/api/media/${m.id}/thumbnail`
+      break
+    }
+  }
+  item.first_thumbnail = firstThumb
+  item.use_default_media_placeholder =
+    r.media_entries.length === 0 ||
+    !r.media_entries.some((m) => m.thumbnail_path)
+}
+
+async function onReorderMedia(orderedIds: number[]) {
+  if (!record.value || orderedIds.length < 2) return
+  reorderBusy.value = true
+  try {
+    await Promise.all(
+      orderedIds.map((id, i) => updateMedia(id, { sort_order: i }))
+    )
+    await store.loadRecord(date.value)
+    syncListThumbnailForCurrentDate()
+    ElMessage.success('排序已保存')
+  } catch {
+    ElMessage.error('保存排序失败，请重试')
+    await store.loadRecord(date.value)
+  } finally {
+    reorderBusy.value = false
+  }
+}
 </script>
 
 <template>
@@ -107,10 +146,17 @@ function onMilestoneSaved() {
         </div>
       </div>
 
+      <p v-if="record.media_entries.length > 1" class="reorder-hint">
+        电脑端可直接拖动格子排序；手机和平板请先长按某一格，感到轻微震动后再拖到目标位置松手。保存后时间轴首张缩略图会与新顺序一致。
+      </p>
+
       <DiaryView
         :media-entries="record.media_entries"
         :text-entries="record.text_entries"
         :use-default-media-placeholder="record.use_default_media_placeholder ?? false"
+        :reorderable="record.media_entries.length > 1"
+        :reorder-busy="reorderBusy"
+        @reorder-media="onReorderMedia"
       />
 
       <div v-if="!record.milestone" class="milestone-action">
@@ -215,6 +261,17 @@ function onMilestoneSaved() {
   padding: 10px 20px;
   border-radius: 10px;
   background: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+.reorder-hint {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
   border: 1px solid var(--border-color);
 }
 

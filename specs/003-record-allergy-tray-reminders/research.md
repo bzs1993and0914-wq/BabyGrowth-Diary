@@ -18,9 +18,9 @@
 - **Rationale**: 双端校验防绕过；嵌入式后端与用户同机，时区一致风险低。
 - **Alternatives considered**: 仅以服务端 UTC 换算——在跨时区单机场景几乎不必要，且增加与用户日历心智不一致风险。
 
-## R-004 — 每日 17:00 提醒实现
+## R-004 — 每日 10:00 提醒实现
 
-- **Decision**: 在 Electron **主进程**用 `setInterval`（如每 60s）或下一次 `setTimeout` 对齐到本地 17:00，触发 `Notification`（或 `dialog.showMessageBox` 降级）；将「已提醒日期」存 `electron-store` 键如 `lastDailyRecordNudgeDate`（`YYYY-MM-DD`），自然日维度去重。
+- **Decision**: 在 Electron **主进程**用 `setInterval`（如每 60s）或下一次 `setTimeout` 对齐到本地 10:00，触发 `Notification`（或 `dialog.showMessageBox` 降级）；将「已提醒日期」存 `electron-store` 键如 `lastDailyRecordNudgeDate`（`YYYY-MM-DD`），自然日维度去重。
 - **Rationale**: 规格要求客户端侧、本地时区、每自然日最多一次；无需后端参与，符合离线优先。
 - **Alternatives considered**: `node-cron`——依赖更小可不用；系统日历/launchd——过重。
 
@@ -43,7 +43,6 @@ Actually I'll fix: change R-005613 to R-005 and the next R-006 about 托盘降�
 
 I'll rewrite research.md cleanly without typo.
 </think>
-
 
 <｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
 StrReplace

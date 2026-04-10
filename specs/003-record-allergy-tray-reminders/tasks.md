@@ -10,7 +10,7 @@
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: 可并行（不同文件、无未完成的前置依赖）
-- **[Story]**: US1 = 日期上限；US2 = 过敏；US3 = 17:00 提醒；US4 = 托盘
+- **[Story]**: US1 = 日期上限；US2 = 过敏；US3 = 10:00 提醒；US4 = 托盘
 - 描述中须包含**确切文件路径**
 
 ## Path Conventions
@@ -77,16 +77,16 @@
 
 ---
 
-## Phase 5: User Story 3 — 每日 17:00 提醒 (Priority: P3)
+## Phase 5: User Story 3 — 每日 10:00 提醒 (Priority: P3)
 
-**Goal**: 每自然日本地 17:00 至多一次桌面通知，文案含义为「该给宝宝创建新的记录啦」。
+**Goal**: 每自然日本地 10:00 至多一次桌面通知，文案含义为「该给宝宝创建新的记录啦」。
 
 **Independent Test**: 见 `quickstart.md` §3。
 
 ### Implementation for User Story 3
 
 - [x] T015 [US3] Add `electron-store`（或 `research.md` 选定之等价）依赖，于 `package.json` 并在 `electron/main.ts` 初始化用于键 `lastDailyRecordNudgeDate`
-- [x] T016 [US3] Implement local-time 17:00 check loop、`Notification`（或 `dialog` 降级）、按日去重于 `electron/main.ts`；在 macOS 按需请求通知权限
+- [x] T016 [US3] Implement local-time 10:00 check loop、`Notification`（或 `dialog` 降级）、按日去重于 `electron/main.ts`；在 macOS 按需请求通知权限
 
 **Checkpoint**: US3 在主进程可单独验收（应用保持运行前提下）。
 

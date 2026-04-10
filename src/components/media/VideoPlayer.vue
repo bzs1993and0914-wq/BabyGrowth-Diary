@@ -270,12 +270,18 @@ watch(
   width: 100%;
   height: 100%;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
   -webkit-tap-highlight-color: transparent;
 }
 
 .video-shell {
   position: relative;
   width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   border-radius: 10px;
   overflow: hidden;
   background: #0a0a0a;
@@ -283,11 +289,13 @@ watch(
 }
 
 .player {
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
   display: block;
-  vertical-align: top;
   background: #000;
-  max-height: min(72vh, 560px);
+  object-fit: contain;
+  object-position: center;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   outline: none;
@@ -497,11 +505,16 @@ watch(
   font-size: 14px;
 }
 
-@media (max-width: 768px) {
-  .player {
-    max-height: none;
+@media (min-width: 769px) {
+  .video-player {
+    /* 桌面弹层：理想高度与视口帽取小，预留标题 + el-dialog 内边距 + body 下边距 */
+    height: min(72vh, 560px, calc(100dvh - 168px));
+    max-height: min(72vh, 560px, calc(100dvh - 168px));
+    flex: 0 0 auto;
   }
+}
 
+@media (max-width: 768px) {
   .control-row {
     padding: 0 8px 8px;
   }

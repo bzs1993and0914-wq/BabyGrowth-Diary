@@ -5,9 +5,14 @@ import { getMediaUrl, getThumbnailUrl } from '@/api/media'
 import VideoPlayer from '@/components/media/VideoPlayer.vue'
 import type { MediaEntryResponse } from '@/types/api'
 
-const props = defineProps<{
-  media: MediaEntryResponse
-}>()
+const props = withDefaults(
+  defineProps<{
+    media: MediaEntryResponse
+    /** 为 true 时禁止内部 img/video 拖拽，便于外层拖放排序 */
+    suppressNativeDrag?: boolean
+  }>(),
+  { suppressNativeDrag: false }
+)
 
 const dialogVisible = ref(false)
 /** 缩略图 URL 加载失败时改用视频元素展示首帧 */
@@ -69,6 +74,7 @@ function onFallbackVideoLoaded(e: Event) {
       :src="posterSrc"
       :alt="media.description || media.original_filename || '视频'"
       loading="lazy"
+      :draggable="!suppressNativeDrag"
       @error="onPosterError"
     />
     <video
@@ -78,6 +84,7 @@ function onFallbackVideoLoaded(e: Event) {
       playsinline
       preload="metadata"
       :src="videoSrc"
+      :draggable="!suppressNativeDrag"
       @loadeddata="onFallbackVideoLoaded"
     />
 
@@ -168,10 +175,12 @@ function onFallbackVideoLoaded(e: Event) {
   outline: none;
 }
 
-/* 桌面：对话框内黑底贴边 */
+/* 桌面：对话框内黑底贴边；裁剪溢出，避免与 VideoPlayer 视口帽配合后仍出现滚动条 */
 .video-preview-dialog:not(.video-preview-dialog--mobile) .el-dialog__body {
   padding: 0 0 12px;
   background: #000;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 /* 移动端：全屏弹层，视频区占满剩余空间 */

@@ -7,8 +7,10 @@ const props = withDefaults(
     src: string
     alt?: string
     clickable?: boolean
+    /** 为 true 时禁止 img 原生拖拽，便于外层单元格承接 HTML5 拖放排序 */
+    suppressNativeDrag?: boolean
   }>(),
-  { alt: '', clickable: true }
+  { alt: '', clickable: true, suppressNativeDrag: false }
 )
 
 const showOverlay = ref(false)
@@ -43,6 +45,7 @@ function closeOverlay() {
       :alt="alt"
       class="preview-img"
       :class="{ clickable }"
+      :draggable="!suppressNativeDrag"
       @click="handleClick"
       @error="broken = true"
     />
