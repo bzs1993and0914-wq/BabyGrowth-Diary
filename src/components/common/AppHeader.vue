@@ -104,6 +104,18 @@ const navItems = [
 function isActive(name: string) {
   return route.name === name
 }
+
+/** 显式 push，避免部分环境下 router-link + 嵌套 el-icon 导致点击/触摸不触发导航 */
+function navHref(path: string) {
+  return router.resolve({ path }).href
+}
+
+function goNav(e: MouseEvent, path: string) {
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+  e.preventDefault()
+  if (isCompactNav.value) mobileNavOpen.value = false
+  void router.push(path)
+}
 </script>
 
 <template>
@@ -115,15 +127,17 @@ function isActive(name: string) {
       </div>
 
       <nav v-if="!isCompactNav" class="nav-links" aria-label="主导航">
-        <router-link
+        <a
           v-for="item in navItems"
           :key="item.name"
-          :to="item.path"
+          :href="navHref(item.path)"
           :class="['nav-item', { active: isActive(item.name) }]"
+          :aria-current="isActive(item.name) ? 'page' : undefined"
+          @click="goNav($event, item.path)"
         >
           <el-icon :size="16"><component :is="item.icon" /></el-icon>
           <span class="nav-label">{{ item.label }}</span>
-        </router-link>
+        </a>
       </nav>
       <div v-else class="header-fill" aria-hidden="true" />
 
@@ -224,15 +238,17 @@ function isActive(name: string) {
     >
       <div class="sheet-handle" aria-hidden="true" />
       <nav class="mobile-nav" aria-label="主导航">
-        <router-link
+        <a
           v-for="item in navItems"
           :key="item.name"
-          :to="item.path"
+          :href="navHref(item.path)"
           :class="['mobile-nav-item', { active: isActive(item.name) }]"
+          :aria-current="isActive(item.name) ? 'page' : undefined"
+          @click="goNav($event, item.path)"
         >
           <el-icon :size="18"><component :is="item.icon" /></el-icon>
           <span>{{ item.label }}</span>
-        </router-link>
+        </a>
         <el-button
           v-if="auth.isAuthenticated"
           type="primary"
@@ -325,6 +341,8 @@ function isActive(name: string) {
 }
 
 .nav-links {
+  position: relative;
+  z-index: 2;
   display: flex;
   gap: 4px;
   flex: 1;
@@ -358,11 +376,16 @@ function isActive(name: string) {
   font-size: 14px;
   color: var(--text-secondary);
   text-decoration: none;
+  cursor: pointer;
   transition:
     color 0.2s,
     background-color 0.2s;
   flex-shrink: 0;
   white-space: nowrap;
+}
+
+.nav-item :deep(.el-icon) {
+  pointer-events: none;
 }
 
 .nav-label {
@@ -381,6 +404,8 @@ function isActive(name: string) {
 }
 
 .header-actions {
+  position: relative;
+  z-index: 1;
   display: flex;
   gap: 8px;
   align-items: center;
@@ -389,9 +414,13 @@ function isActive(name: string) {
 }
 
 @media (max-width: 767px) {
+  .app-header {
+    height: 54px;
+  }
+
   .header-inner {
-    padding: 0 12px;
-    gap: 6px;
+    padding: 0 14px;
+    gap: 8px;
   }
 
   .brand-title {
@@ -399,12 +428,16 @@ function isActive(name: string) {
     max-width: 28vw;
   }
 
+  .brand-icon {
+    font-size: 22px;
+  }
+
   .header-actions {
-    gap: 4px;
+    gap: 6px;
   }
 
   .header-actions :deep(.el-button.is-circle) {
-    padding: 8px;
+    padding: 7px;
   }
 }
 
@@ -456,6 +489,10 @@ function isActive(name: string) {
   color: var(--color-primary);
   background: var(--color-primary-light);
   font-weight: 600;
+}
+
+.mobile-nav-item :deep(.el-icon) {
+  pointer-events: none;
 }
 
 .mobile-nav-record {

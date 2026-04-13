@@ -113,4 +113,44 @@ const mediaTotalCount = computed(() =>
   opacity: 1;
   max-height: 2000px;
 }
+
+/* ═══ 移动端优化 ═══ */
+@media (max-width: 767px) {
+  .timeline-group {
+    margin-bottom: 20px;
+  }
+
+  .group-header {
+    padding: 6px 2px 10px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .group-header:active {
+    opacity: 0.7;
+  }
+
+  .group-title {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .group-name {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+
+  .group-stats {
+    font-size: 12px;
+  }
+
+  .group-body.flat {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .group-body.collapsed {
+    gap: 6px;
+  }
+}
 </style>

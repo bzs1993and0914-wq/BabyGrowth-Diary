@@ -260,7 +260,7 @@ function onThumbError(e: Event) {
   color: var(--text-secondary);
 }
 
-/* Collapsed layout */
+/* ── Collapsed layout ── */
 .timeline-card.collapsed {
   display: flex;
   align-items: center;
@@ -325,5 +325,102 @@ function onThumbError(e: Event) {
   font-size: 12px;
   color: var(--text-secondary);
   flex-shrink: 0;
+}
+
+/* ═══ 移动端优化 ═══ */
+@media (max-width: 767px) {
+  .timeline-card.flat {
+    border-radius: 16px;
+    box-shadow: 0 2px 12px var(--shadow-color);
+  }
+
+  .timeline-card.flat:active {
+    transform: scale(0.98);
+    box-shadow: 0 1px 6px var(--shadow-color);
+  }
+
+  .timeline-card.flat:hover {
+    transform: none;
+    box-shadow: 0 2px 12px var(--shadow-color);
+  }
+
+  .card-thumb {
+    height: 180px;
+  }
+
+  .card-thumb--empty {
+    height: 0;
+  }
+
+  .media-badge {
+    top: 10px;
+    right: 10px;
+    padding: 4px 10px;
+    border-radius: 14px;
+    font-size: 12px;
+    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.45);
+  }
+
+  .card-body {
+    padding: 12px 14px 14px;
+  }
+
+  .allergy-banner {
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+
+  .card-date {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .card-text {
+    font-size: 13px;
+    line-height: 1.55;
+    margin-bottom: 10px;
+  }
+
+  .card-meta {
+    gap: 10px;
+  }
+
+  .meta-item {
+    font-size: 12px;
+    gap: 3px;
+    color: var(--text-secondary);
+  }
+
+  /* 列表模式优化 */
+  .timeline-card.collapsed {
+    padding: 10px 12px;
+    border-radius: 12px;
+    gap: 10px;
+    min-height: 56px;
+    box-shadow: none;
+    border: 1px solid var(--border-color);
+  }
+
+  .timeline-card.collapsed:active {
+    background: var(--color-primary-light);
+  }
+
+  .collapsed-left {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+  }
+
+  .collapsed-date {
+    font-size: 13px;
+  }
+
+  .collapsed-text {
+    font-size: 12px;
+  }
 }
 </style>

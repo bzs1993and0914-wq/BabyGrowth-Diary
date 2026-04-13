@@ -65,4 +65,25 @@ function handleAction() {
   max-width: 320px;
   line-height: 1.6;
 }
+
+@media (max-width: 767px) {
+  .empty-state {
+    padding: 48px 24px;
+  }
+
+  .empty-icon {
+    font-size: 56px;
+    margin-bottom: 16px;
+  }
+
+  .empty-title {
+    font-size: 18px;
+  }
+
+  .empty-desc {
+    font-size: 13px;
+    max-width: 280px;
+    margin-bottom: 20px;
+  }
+}
 </style>

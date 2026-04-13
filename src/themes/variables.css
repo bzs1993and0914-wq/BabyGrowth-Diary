@@ -170,6 +170,32 @@ img {
   background-color: var(--bg-card);
 }
 
+/* ========== Mobile Optimizations ========== */
+
+@media (max-width: 767px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scrollbar-gutter: auto;
+  }
+
+  body {
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
+  }
+
+  .el-card {
+    border-radius: 14px !important;
+  }
+
+  .el-button {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .el-input__wrapper {
+    border-radius: 10px;
+  }
+}
+
 /* ========== Transitions ========== */
 
 .fade-enter-active,

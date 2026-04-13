@@ -80,6 +80,7 @@ function closeOverlay() {
 <style scoped>
 .image-preview {
   width: 100%;
+  height: 100%;
 }
 
 .preview-img {

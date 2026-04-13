@@ -17,6 +17,14 @@ export function getRecord(date: string) {
   return apiClient.get<RecordResponse>(`/api/records/${date}`)
 }
 
+/** 当日是否已有记录（列表查询，避免对不存在的日期产生 404 日志噪声）。 */
+export async function hasRecordForDate(date: string): Promise<boolean> {
+  const res = await apiClient.get<RecordListResponse>('/api/records/', {
+    params: { view: 'day', date, page: 1, page_size: 1 },
+  })
+  return res.data.total > 0
+}
+
 /** 创建新的每日记录。 */
 export function createRecord(data: RecordCreate) {
   return apiClient.post<RecordResponse>('/api/records/', data)

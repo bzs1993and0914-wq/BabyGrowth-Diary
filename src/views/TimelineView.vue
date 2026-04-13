@@ -239,4 +239,25 @@ onUnmounted(() => {
   font-size: 13px;
   color: var(--text-secondary);
 }
+
+@media (max-width: 767px) {
+  .day-grid.flat {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .day-grid.collapsed {
+    gap: 6px;
+  }
+
+  .loading-more {
+    padding: 20px 0;
+    font-size: 13px;
+  }
+
+  .end-hint {
+    padding: 20px 0;
+    font-size: 12px;
+  }
+}
 </style>

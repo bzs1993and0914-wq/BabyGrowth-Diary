@@ -1,18 +1,8 @@
-import {
-  app,
-  BrowserWindow,
-  Tray,
-  Menu,
-  nativeImage,
-  Notification,
-  dialog,
-} from 'electron'
+import { app, BrowserWindow, Tray, Menu, nativeImage } from 'electron'
 import { join } from 'path'
 import { spawn, ChildProcess } from 'child_process'
 import http from 'http'
-import Store from 'electron-store'
 import type { NativeImage } from 'electron'
-import { DAILY_RECORD_NUDGE_HOUR } from '../src/constants/dailyRecordNudge'
 
 let mainWindow: BrowserWindow | null = null
 let pythonProcess: ChildProcess | null = null
@@ -25,15 +15,6 @@ const isDev = !app.isPackaged
 
 const BACKEND_PORT = 18900
 const DEV_BACKEND_HEALTH_URL = `http://127.0.0.1:${BACKEND_PORT}/api/health`
-
-type ReminderStoreSchema = {
-  lastDailyRecordNudgeDate: string | null
-}
-
-const reminderStore = new Store<ReminderStoreSchema>({
-  name: 'babygrow-reminders',
-  defaults: { lastDailyRecordNudgeDate: null },
-})
 
 /** 专用托盘图（小 PNG）；勿用大尺寸 JPG 作菜单栏图标 — macOS 上几乎不可见或显示异常。彩色图标勿用 Template 模式。 */
 const TRAY_ICON_NAME = 'trayBaby.png'
@@ -212,78 +193,6 @@ function setupTray(): void {
   }
 }
 
-function localDateKey(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-function showNudgeDialogFallback(message: string): void {
-  const win = mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined
-  if (win) {
-    void dialog.showMessageBox(win, {
-      type: 'info',
-      title: 'BabyGrow',
-      message,
-      buttons: ['知道了'],
-      defaultId: 0,
-    })
-  } else {
-    void dialog.showMessageBox({
-      type: 'info',
-      title: 'BabyGrow',
-      message,
-      buttons: ['知道了'],
-      defaultId: 0,
-    })
-  }
-}
-
-function maybeShowDailyRecordNudge(): void {
-  const now = new Date()
-  if (now.getHours() !== DAILY_RECORD_NUDGE_HOUR) {
-    return
-  }
-  const key = localDateKey(now)
-  if (reminderStore.get('lastDailyRecordNudgeDate') === key) {
-    return
-  }
-
-  const body = '该给宝宝创建新的记录啦'
-  const hasWin = !!(mainWindow && !mainWindow.isDestroyed())
-
-  /** 渲染进程内轻提示（应用打开时确保能看见，弥补系统通知未授权或被勿扰屏蔽） */
-  if (hasWin) {
-    mainWindow!.webContents.send('daily-record-nudge', body)
-  }
-
-  if (Notification.isSupported()) {
-    try {
-      const n = new Notification({
-        title: 'BabyGrow',
-        body,
-      })
-      n.on('click', () => showMainWindow())
-      n.show()
-    } catch (e) {
-      console.warn('[Nudge] Notification.show failed', e)
-      if (!hasWin) {
-        showNudgeDialogFallback(body)
-      }
-    }
-  } else if (!hasWin) {
-    showNudgeDialogFallback(body)
-  }
-
-  reminderStore.set('lastDailyRecordNudgeDate', key)
-}
-
-function startDailyReminderLoop(): void {
-  maybeShowDailyRecordNudge()
-  setInterval(() => maybeShowDailyRecordNudge(), 60_000)
-}
-
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -339,7 +248,6 @@ app.whenReady().then(async () => {
 
   createWindow()
   setupTray()
-  startDailyReminderLoop()
 
   app.on('activate', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {

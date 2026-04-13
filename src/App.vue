@@ -17,31 +17,21 @@
 <script setup lang="ts">
 import { onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElNotification } from 'element-plus'
 import AppHeader from '@/components/common/AppHeader.vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useAuthStore } from '@/stores/auth'
-import { startWebDailyRecordNudge } from '@/utils/dailyRecordNudgeWeb'
+import { useDailyRecordNudge } from '@/composables/useDailyRecordNudge'
 
 const route = useRoute()
 const settingsStore = useSettingsStore()
 const auth = useAuthStore()
 
+useDailyRecordNudge()
+
 onMounted(() => {
   if (auth.isAuthenticated) {
     settingsStore.fetchSettings()
   }
-
-  startWebDailyRecordNudge()
-
-  window.electronAPI?.onDailyRecordNudge?.((message) => {
-    ElNotification({
-      title: 'BabyGrow',
-      message,
-      type: 'info',
-      duration: 10_000,
-    })
-  })
 })
 
 watch(
@@ -76,6 +66,13 @@ watch(
 .main-content--full {
   padding: 0;
   max-width: none;
+}
+
+@media (max-width: 767px) {
+  .main-content {
+    padding: 70px 14px 28px;
+    padding-bottom: max(28px, env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .fade-enter-active,
