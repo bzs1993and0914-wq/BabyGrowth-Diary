@@ -10,6 +10,7 @@ from app.schemas.auth import (
     ChangePasswordRequest,
     LoginRequest,
     MessageResponse,
+    ProfileUpdate,
     RegisterRequest,
     TokenResponse,
     UserPublic,
@@ -79,6 +80,19 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
 @router.get("/me", response_model=UserPublic)
 async def me(current: User = Depends(get_current_user)):
     """返回当前登录用户的基本信息（用于前端初始化和刷新用户状态）。"""
+    return UserPublic.model_validate(current)
+
+
+@router.put("/profile", response_model=UserPublic)
+async def update_profile(
+    data: ProfileUpdate,
+    current: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if data.parent_role is not None:
+        current.parent_role = data.parent_role
+    await db.commit()
+    await db.refresh(current)
     return UserPublic.model_validate(current)
 
 

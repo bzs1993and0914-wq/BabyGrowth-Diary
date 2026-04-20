@@ -9,18 +9,24 @@ from app.config import APP_DATA_DIR, DATABASE_PATH, MEDIA_BASE_DIR, THUMBNAIL_BA
 logger = logging.getLogger(__name__)
 
 
-def get_media_dir(date: str) -> Path:
-    """Returns and creates media/{YYYY}/{MM}/{DD}/ directory."""
+def get_media_dir(date: str, subfolder: Optional[str] = None) -> Path:
+    """Returns and creates media/{subfolder?}/{YYYY}/{MM}/{DD}/ directory."""
     parts = date.split("-")
-    path = MEDIA_BASE_DIR / parts[0] / parts[1] / parts[2]
+    path = MEDIA_BASE_DIR
+    if subfolder:
+        path = path / subfolder
+    path = path / parts[0] / parts[1] / parts[2]
     path.mkdir(parents=True, exist_ok=True)
     return path
 
 
-def get_thumbnail_dir(date: str) -> Path:
-    """Returns and creates thumbnails/{YYYY}/{MM}/{DD}/ directory."""
+def get_thumbnail_dir(date: str, subfolder: Optional[str] = None) -> Path:
+    """Returns and creates thumbnails/{subfolder?}/{YYYY}/{MM}/{DD}/ directory."""
     parts = date.split("-")
-    path = THUMBNAIL_BASE_DIR / parts[0] / parts[1] / parts[2]
+    path = THUMBNAIL_BASE_DIR
+    if subfolder:
+        path = path / subfolder
+    path = path / parts[0] / parts[1] / parts[2]
     path.mkdir(parents=True, exist_ok=True)
     return path
 

@@ -14,6 +14,8 @@
   --shadow-color: rgba(0, 0, 0, 0.06);
   --timeline-line: #dcdfe6;
   --header-bg: rgba(255, 255, 255, 0.85);
+  --header-height: 60px;
+  --header-height-mobile: 54px;
 }
 
 [data-theme='warm'] {

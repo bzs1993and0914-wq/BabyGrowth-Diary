@@ -1,1 +1,235 @@
-"use strict";const o=require("electron"),u=require("path"),g=require("child_process"),_=require("http");let n=null,a=null,i=null,w=!1,d=!1;const p=!o.app.isPackaged,y=18900,P=`http://127.0.0.1:${y}/api/health`,T="trayBaby.png",b="iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAP0lEQVR4nGNgGGjAiEfuPzFqGYnQiFcPE4maMdQwMVAImEi0HUMtEzVdMPAGMJKgj5FmXmAkxXZCGohKygMPACD0Bxb1lodaAAAAAElFTkSuQmCC";function h(t){const{width:e,height:r}=t.getSize(),s=process.platform==="darwin"?22:16;return e<=s&&r<=s?t:t.resize({width:s,height:s,quality:"best"})}function k(){return p?u.join(__dirname,"..","public",T):u.join(__dirname,"..","dist",T)}function E(){try{const t=k();let e=o.nativeImage.createFromPath(t);return e.isEmpty()?(console.warn("[Tray] Icon empty at path, using embedded fallback",t),e=o.nativeImage.createFromBuffer(Buffer.from(b,"base64")),e=h(e),process.platform==="darwin"&&e.setTemplateImage(!0),e):(e=h(e),e)}catch(t){console.warn("[Tray] Failed to load icon",t);let e=o.nativeImage.createFromBuffer(Buffer.from(b,"base64"));return e=h(e),process.platform==="darwin"&&e.setTemplateImage(!0),e}}function F(t,e){const r=Date.now()+t,s=()=>new Promise(l=>{const c=_.get(P,f=>{l(f.statusCode===200)});c.on("error",()=>l(!1)),c.setTimeout(400,()=>{c.destroy(),l(!1)})});return new Promise(l=>{const c=()=>{s().then(f=>{if(f){l(!0);return}if(Date.now()>=r){l(!1);return}setTimeout(c,e)})};c()})}function B(){var t,e;if(p)a=g.spawn("uvicorn",["app.main:app","--reload","--port",String(y)],{cwd:u.join(__dirname,"..","backend"),shell:!0,stdio:"pipe"});else{const r=u.join(process.resourcesPath,"babygrow-server");a=g.spawn(r,[],{stdio:"pipe"})}(t=a.stdout)==null||t.on("data",r=>{console.log(`[Backend] ${r.toString().trim()}`)}),(e=a.stderr)==null||e.on("data",r=>{console.error(`[Backend] ${r.toString().trim()}`)}),a.on("error",r=>{console.error("Failed to start Python backend:",r)})}function C(){a&&(a.kill(),a=null)}function I(){if(n&&!n.isDestroyed()){n.show(),n.focus();return}A()}function m(){i&&(i.destroy(),i=null)}function D(){m(),d=!1;try{const t=E();i=new o.Tray(t),d=!0,i.setToolTip("BabyGrow - 苒宝宝成长记录");const e=o.Menu.buildFromTemplate([{label:"显示主窗口",click:()=>I()},{type:"separator"},{label:"退出",click:()=>{w=!0,m(),o.app.quit()}}]);i.setContextMenu(e)}catch(t){console.warn("[Tray] Unavailable, falling back to minimize-on-close",t),i=null,d=!1}}function A(){n=new o.BrowserWindow({width:1200,height:800,minWidth:800,minHeight:600,webPreferences:{preload:u.join(__dirname,"preload.js"),contextIsolation:!0,nodeIntegration:!1},title:"BabyGrow - 宝宝成长记录"}),p?(n.loadURL("http://localhost:5173"),n.webContents.openDevTools()):n.loadFile(u.join(__dirname,"..","dist","index.html")),n.on("close",t=>{w||(t.preventDefault(),d?n==null||n.hide():n==null||n.minimize())}),n.on("closed",()=>{n=null})}o.app.whenReady().then(async()=>{p&&await F(15e3,250)?console.log("[Backend] 开发模式下检测到端口",y,"已有健康实例，跳过 Electron 内嵌 uvicorn（避免双进程锁库）"):B(),A(),D(),o.app.on("activate",()=>{if(n&&!n.isDestroyed()){n.show();return}o.BrowserWindow.getAllWindows().length===0&&A()})});o.app.on("window-all-closed",()=>{process.platform!=="darwin"&&o.app.quit()});o.app.on("before-quit",()=>{w=!0,C(),m()});
+"use strict";
+const electron = require("electron");
+const path = require("path");
+const child_process = require("child_process");
+const http = require("http");
+let mainWindow = null;
+let pythonProcess = null;
+let tray = null;
+let quitFromTray = false;
+let hideToTrayOnClose = false;
+const isDev = !electron.app.isPackaged;
+const BACKEND_PORT = 18900;
+const DEV_BACKEND_HEALTH_URL = `http://127.0.0.1:${BACKEND_PORT}/api/health`;
+const TRAY_ICON_NAME = "trayBaby.png";
+const TRAY_FALLBACK_PNG_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAP0lEQVR4nGNgGGjAiEfuPzFqGYnQiFcPE4maMdQwMVAImEi0HUMtEzVdMPAGMJKgj5FmXmAkxXZCGohKygMPACD0Bxb1lodaAAAAAElFTkSuQmCC";
+function normalizeTrayIconSize(img) {
+  const { width, height } = img.getSize();
+  const max = process.platform === "darwin" ? 22 : 16;
+  if (width <= max && height <= max) {
+    return img;
+  }
+  return img.resize({ width: max, height: max, quality: "best" });
+}
+function trayIconPath() {
+  if (isDev) {
+    return path.join(__dirname, "..", "public", TRAY_ICON_NAME);
+  }
+  return path.join(__dirname, "..", "dist", TRAY_ICON_NAME);
+}
+function createTrayIcon() {
+  try {
+    const p = trayIconPath();
+    let img = electron.nativeImage.createFromPath(p);
+    if (img.isEmpty()) {
+      console.warn("[Tray] Icon empty at path, using embedded fallback", p);
+      img = electron.nativeImage.createFromBuffer(
+        Buffer.from(TRAY_FALLBACK_PNG_BASE64, "base64")
+      );
+      img = normalizeTrayIconSize(img);
+      if (process.platform === "darwin") {
+        img.setTemplateImage(true);
+      }
+      return img;
+    }
+    img = normalizeTrayIconSize(img);
+    return img;
+  } catch (e) {
+    console.warn("[Tray] Failed to load icon", e);
+    let fb = electron.nativeImage.createFromBuffer(
+      Buffer.from(TRAY_FALLBACK_PNG_BASE64, "base64")
+    );
+    fb = normalizeTrayIconSize(fb);
+    if (process.platform === "darwin") {
+      fb.setTemplateImage(true);
+    }
+    return fb;
+  }
+}
+function waitForExistingDevBackend(maxWaitMs, intervalMs) {
+  const deadline = Date.now() + maxWaitMs;
+  const tryOnce = () => new Promise((resolve) => {
+    const req = http.get(DEV_BACKEND_HEALTH_URL, (res) => {
+      resolve(res.statusCode === 200);
+    });
+    req.on("error", () => resolve(false));
+    req.setTimeout(400, () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
+  return new Promise((resolve) => {
+    const poll = () => {
+      void tryOnce().then((ok) => {
+        if (ok) {
+          resolve(true);
+          return;
+        }
+        if (Date.now() >= deadline) {
+          resolve(false);
+          return;
+        }
+        setTimeout(poll, intervalMs);
+      });
+    };
+    poll();
+  });
+}
+function startPythonBackend() {
+  var _a, _b;
+  if (isDev) {
+    pythonProcess = child_process.spawn(
+      "uvicorn",
+      ["app.main:app", "--reload", `--port`, String(BACKEND_PORT)],
+      {
+        cwd: path.join(__dirname, "..", "backend"),
+        shell: true,
+        stdio: "pipe"
+      }
+    );
+  } else {
+    const serverPath = path.join(process.resourcesPath, "babygrow-server");
+    pythonProcess = child_process.spawn(serverPath, [], {
+      stdio: "pipe"
+    });
+  }
+  (_a = pythonProcess.stdout) == null ? void 0 : _a.on("data", (data) => {
+    console.log(`[Backend] ${data.toString().trim()}`);
+  });
+  (_b = pythonProcess.stderr) == null ? void 0 : _b.on("data", (data) => {
+    console.error(`[Backend] ${data.toString().trim()}`);
+  });
+  pythonProcess.on("error", (err) => {
+    console.error("Failed to start Python backend:", err);
+  });
+}
+function stopPythonBackend() {
+  if (pythonProcess) {
+    pythonProcess.kill();
+    pythonProcess = null;
+  }
+}
+function showMainWindow() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+    mainWindow.focus();
+    return;
+  }
+  createWindow();
+}
+function destroyTray() {
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
+}
+function setupTray() {
+  destroyTray();
+  hideToTrayOnClose = false;
+  try {
+    const icon = createTrayIcon();
+    tray = new electron.Tray(icon);
+    hideToTrayOnClose = true;
+    tray.setToolTip("BabyGrow - 苒宝宝成长记录");
+    const contextMenu = electron.Menu.buildFromTemplate([
+      {
+        label: "显示主窗口",
+        click: () => showMainWindow()
+      },
+      { type: "separator" },
+      {
+        label: "退出",
+        click: () => {
+          quitFromTray = true;
+          destroyTray();
+          electron.app.quit();
+        }
+      }
+    ]);
+    tray.setContextMenu(contextMenu);
+  } catch (e) {
+    console.warn("[Tray] Unavailable, falling back to minimize-on-close", e);
+    tray = null;
+    hideToTrayOnClose = false;
+  }
+}
+function createWindow() {
+  mainWindow = new electron.BrowserWindow({
+    width: 1200,
+    height: 800,
+    minWidth: 800,
+    minHeight: 600,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false
+    },
+    title: "BabyGrow - 宝宝成长记录"
+  });
+  if (isDev) {
+    mainWindow.loadURL("http://localhost:5173");
+    mainWindow.webContents.openDevTools();
+  } else {
+    mainWindow.loadFile(path.join(__dirname, "..", "dist", "index.html"));
+  }
+  mainWindow.on("close", (event) => {
+    if (!quitFromTray) {
+      event.preventDefault();
+      if (hideToTrayOnClose) {
+        mainWindow == null ? void 0 : mainWindow.hide();
+      } else {
+        mainWindow == null ? void 0 : mainWindow.minimize();
+      }
+    }
+  });
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
+}
+electron.app.whenReady().then(async () => {
+  if (isDev) {
+    const alreadyUp = await waitForExistingDevBackend(15e3, 250);
+    if (alreadyUp) {
+      console.log(
+        "[Backend] 开发模式下检测到端口",
+        BACKEND_PORT,
+        "已有健康实例，跳过 Electron 内嵌 uvicorn（避免双进程锁库）"
+      );
+    } else {
+      startPythonBackend();
+    }
+  } else {
+    startPythonBackend();
+  }
+  createWindow();
+  setupTray();
+  electron.app.on("activate", () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      return;
+    }
+    if (electron.BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
+electron.app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    electron.app.quit();
+  }
+});
+electron.app.on("before-quit", () => {
+  quitFromTray = true;
+  stopPythonBackend();
+  destroyTray();
+});

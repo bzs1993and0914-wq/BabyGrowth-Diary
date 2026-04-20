@@ -10,6 +10,7 @@ from app.models import Base
 
 if TYPE_CHECKING:
     from app.models.daily_record import DailyRecord
+    from app.models.parent_word import ParentWord
 
 
 class MediaEntry(Base):
@@ -19,8 +20,11 @@ class MediaEntry(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    daily_record_id: Mapped[int] = mapped_column(
-        ForeignKey("daily_records.id", ondelete="CASCADE"), nullable=False
+    daily_record_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("daily_records.id", ondelete="CASCADE"), nullable=True
+    )
+    parent_word_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("parent_words.id", ondelete="CASCADE"), nullable=True
     )
     media_type: Mapped[str] = mapped_column(String(10), nullable=False)
     original_path: Mapped[str] = mapped_column(Text, nullable=False)
@@ -34,6 +38,9 @@ class MediaEntry(Base):
         Text, default=lambda: datetime.now().isoformat()
     )
 
-    daily_record: Mapped[DailyRecord] = relationship(
+    daily_record: Mapped[Optional[DailyRecord]] = relationship(
         "DailyRecord", back_populates="media_entries"
+    )
+    parent_word: Mapped[Optional["ParentWord"]] = relationship(
+        "ParentWord", back_populates="media_entries"
     )

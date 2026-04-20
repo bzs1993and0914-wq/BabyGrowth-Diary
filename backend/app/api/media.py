@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 from typing import Optional
 from urllib.parse import quote
 
@@ -21,6 +22,7 @@ from app.config import (
 )
 from app.models.daily_record import DailyRecord
 from app.models.media_entry import MediaEntry
+from app.models.parent_word import ParentWord
 from app.models.user import User
 from app.schemas.media import MediaUpdate, MediaUploadResponse
 from app.services.media_processor import (
@@ -39,6 +41,35 @@ from app.services.storage_manager import (
 
 router = APIRouter(prefix="/media", tags=["media"])
 
+PW_MEDIA_SUBFOLDER = "parent-words"
+
+
+async def _assert_user_owns_media_entry(
+    db: AsyncSession,
+    entry: MediaEntry,
+    user_id: int,
+) -> None:
+    if entry.daily_record_id is not None:
+        rec_res = await db.execute(
+            select(DailyRecord).where(
+                DailyRecord.id == entry.daily_record_id,
+                DailyRecord.user_id == user_id,
+            )
+        )
+        if not rec_res.scalars().first():
+            raise HTTPException(status_code=404, detail="Media not found")
+    elif entry.parent_word_id is not None:
+        pw_res = await db.execute(
+            select(ParentWord).where(
+                ParentWord.id == entry.parent_word_id,
+                ParentWord.user_id == user_id,
+            )
+        )
+        if not pw_res.scalars().first():
+            raise HTTPException(status_code=404, detail="Media not found")
+    else:
+        raise HTTPException(status_code=404, detail="Media not found")
+
 
 def _tier_cap(tier: str) -> int:
     """根据账号等级返回每条记录允许上传的媒体文件上限数量。"""
@@ -48,7 +79,8 @@ def _tier_cap(tier: str) -> int:
 @router.post("/upload", response_model=MediaUploadResponse, status_code=201)
 async def upload_media(
     file: UploadFile = File(...),
-    daily_record_id: int = Form(...),
+    daily_record_id: Optional[int] = Form(None),
+    parent_word_id: Optional[int] = Form(None),
     description: Optional[str] = Form(None),
     sort_order: int = Form(0),
     current_user: User = Depends(get_current_user),
@@ -60,28 +92,57 @@ async def upload_media(
     HEIC 自动转 JPEG → 生成缩略图（图片/视频各自处理） → 提取图片 EXIF 日期 →
     写入数据库记录。
     """
-    result = await db.execute(
-        select(DailyRecord).where(
-            DailyRecord.id == daily_record_id,
-            DailyRecord.user_id == current_user.id,
-        )
-    )
-    record = result.scalars().first()
-    if not record:
-        raise HTTPException(status_code=404, detail="Daily record not found")
-
-    count_result = await db.execute(
-        select(func.count(MediaEntry.id)).where(
-            MediaEntry.daily_record_id == daily_record_id
-        )
-    )
-    existing = int(count_result.scalar() or 0)
-    cap = _tier_cap(current_user.account_tier)
-    if existing >= cap:
+    if (daily_record_id is None) == (parent_word_id is None):
         raise HTTPException(
-            status_code=400,
-            detail=f"已达到当前账号可关联的照片/视频上限（{cap} 个）",
+            status_code=422,
+            detail="必须且只能提供 daily_record_id 或 parent_word_id 其中之一",
         )
+
+    record: Optional[DailyRecord] = None
+    if daily_record_id is not None:
+        result = await db.execute(
+            select(DailyRecord).where(
+                DailyRecord.id == daily_record_id,
+                DailyRecord.user_id == current_user.id,
+            )
+        )
+        record = result.scalars().first()
+        if not record:
+            raise HTTPException(status_code=404, detail="Daily record not found")
+
+        count_result = await db.execute(
+            select(func.count(MediaEntry.id)).where(
+                MediaEntry.daily_record_id == daily_record_id
+            )
+        )
+        existing = int(count_result.scalar() or 0)
+        cap = _tier_cap(current_user.account_tier)
+        if existing >= cap:
+            raise HTTPException(
+                status_code=400,
+                detail=f"已达到当前账号可关联的照片/视频上限（{cap} 个）",
+            )
+    else:
+        result = await db.execute(
+            select(ParentWord).where(
+                ParentWord.id == parent_word_id,
+                ParentWord.user_id == current_user.id,
+            )
+        )
+        pw = result.scalars().first()
+        if not pw:
+            raise HTTPException(status_code=404, detail="Parent word not found")
+
+        count_result = await db.execute(
+            select(func.count(MediaEntry.id)).where(
+                MediaEntry.parent_word_id == parent_word_id
+            )
+        )
+        existing = int(count_result.scalar() or 0)
+        if existing >= 5:
+            raise HTTPException(
+                status_code=400, detail="心语图片数量已达上限（5 张）"
+            )
 
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
@@ -103,13 +164,26 @@ async def upload_media(
     if is_video and file_size > MAX_VIDEO_SIZE:
         raise HTTPException(status_code=400, detail="Video file exceeds 2GB limit")
 
-    media_dir = get_media_dir(record.date)
+    if parent_word_id is not None:
+        folder_date = date.today().isoformat()
+        date_parts = folder_date.split("-")
+        subfolder = PW_MEDIA_SUBFOLDER
+    else:
+        if record is None:
+            raise HTTPException(status_code=404, detail="Daily record not found")
+        folder_date = record.date
+        date_parts = record.date.split("-")
+        subfolder = None
+
+    media_dir = get_media_dir(folder_date, subfolder=subfolder)
     unique_name = f"{uuid.uuid4().hex}.{ext}"
     file_path = media_dir / unique_name
     file_path.write_bytes(content)
 
-    date_parts = record.date.split("-")
-    relative_original = f"{date_parts[0]}/{date_parts[1]}/{date_parts[2]}/{unique_name}"
+    rel_prefix = f"{subfolder}/" if subfolder else ""
+    relative_original = (
+        f"{rel_prefix}{date_parts[0]}/{date_parts[1]}/{date_parts[2]}/{unique_name}"
+    )
 
     saved_path = file_path
     if is_heic:
@@ -118,14 +192,15 @@ async def upload_media(
         if convert_heic_to_jpeg(file_path, jpeg_path):
             saved_path = jpeg_path
             relative_original = (
-                f"{date_parts[0]}/{date_parts[1]}/{date_parts[2]}/{jpeg_name}"
+                f"{rel_prefix}{date_parts[0]}/{date_parts[1]}/"
+                f"{date_parts[2]}/{jpeg_name}"
             )
 
-    thumbnail_dir = get_thumbnail_dir(record.date)
+    thumbnail_dir = get_thumbnail_dir(folder_date, subfolder=subfolder)
     thumb_name = f"{uuid.uuid4().hex}.jpg"
     thumb_path = thumbnail_dir / thumb_name
     relative_thumb: Optional[str] = (
-        f"{date_parts[0]}/{date_parts[1]}/{date_parts[2]}/{thumb_name}"
+        f"{rel_prefix}{date_parts[0]}/{date_parts[1]}/{date_parts[2]}/{thumb_name}"
     )
 
     if is_video:
@@ -143,6 +218,7 @@ async def upload_media(
 
     entry = MediaEntry(
         daily_record_id=daily_record_id,
+        parent_word_id=parent_word_id,
         media_type=media_type,
         original_path=relative_original,
         thumbnail_path=relative_thumb,
@@ -153,7 +229,7 @@ async def upload_media(
         sort_order=sort_order,
     )
     db.add(entry)
-    if record.use_default_media_placeholder:
+    if record is not None and record.use_default_media_placeholder:
         record.use_default_media_placeholder = False
     await db.commit()
     await db.refresh(entry)
@@ -172,14 +248,7 @@ async def serve_file(
     if not entry:
         raise HTTPException(status_code=404, detail="Media not found")
 
-    rec_res = await db.execute(
-        select(DailyRecord).where(
-            DailyRecord.id == entry.daily_record_id,
-            DailyRecord.user_id == current_user.id,
-        )
-    )
-    if not rec_res.scalars().first():
-        raise HTTPException(status_code=404, detail="Media not found")
+    await _assert_user_owns_media_entry(db, entry, current_user.id)
 
     full_path = resolve_media_path(entry.original_path)
     if not full_path.exists():
@@ -225,14 +294,7 @@ async def serve_thumbnail(
     if not entry or not entry.thumbnail_path:
         raise HTTPException(status_code=404, detail="Thumbnail not found")
 
-    rec_res = await db.execute(
-        select(DailyRecord).where(
-            DailyRecord.id == entry.daily_record_id,
-            DailyRecord.user_id == current_user.id,
-        )
-    )
-    if not rec_res.scalars().first():
-        raise HTTPException(status_code=404, detail="Thumbnail not found")
+    await _assert_user_owns_media_entry(db, entry, current_user.id)
 
     full_path = resolve_thumbnail_path(entry.thumbnail_path)
     if not full_path.exists():
@@ -254,14 +316,7 @@ async def update_media(
     if not entry:
         raise HTTPException(status_code=404, detail="Media not found")
 
-    rec_res = await db.execute(
-        select(DailyRecord).where(
-            DailyRecord.id == entry.daily_record_id,
-            DailyRecord.user_id == current_user.id,
-        )
-    )
-    if not rec_res.scalars().first():
-        raise HTTPException(status_code=404, detail="Media not found")
+    await _assert_user_owns_media_entry(db, entry, current_user.id)
 
     if data.description is not None:
         entry.description = data.description
@@ -285,14 +340,7 @@ async def delete_media(
     if not entry:
         raise HTTPException(status_code=404, detail="Media not found")
 
-    rec_res = await db.execute(
-        select(DailyRecord).where(
-            DailyRecord.id == entry.daily_record_id,
-            DailyRecord.user_id == current_user.id,
-        )
-    )
-    if not rec_res.scalars().first():
-        raise HTTPException(status_code=404, detail="Media not found")
+    await _assert_user_owns_media_entry(db, entry, current_user.id)
 
     cleanup_media_files(entry.original_path, entry.thumbnail_path)
     await db.delete(entry)

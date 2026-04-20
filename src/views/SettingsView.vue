@@ -15,11 +15,20 @@ const currentPassword = ref('')
 const newPassword = ref('')
 const changingPwd = ref(false)
 const tierChoice = ref<'normal' | 'vip'>('normal')
+const parentRoleChoice = ref<string>('')
 
 watch(
   () => auth.user?.account_tier,
   (t) => {
     if (t) tierChoice.value = t
+  },
+  { immediate: true },
+)
+
+watch(
+  () => auth.user?.parent_role,
+  (r) => {
+    parentRoleChoice.value = r || ''
   },
   { immediate: true },
 )
@@ -58,6 +67,16 @@ async function onTierChange(val: string | number | boolean | undefined) {
     ElMessage.success(val === 'vip' ? '已切换为 VIP（体验）' : '已切换为普通账号')
   } catch {
     ElMessage.error('切换失败')
+  }
+}
+
+async function onParentRoleChange(val: string | number | boolean | undefined) {
+  const role = val === 'dad' || val === 'mom' ? val : null
+  try {
+    await auth.updateProfile({ parent_role: role })
+    ElMessage.success(role ? (role === 'dad' ? '已设置为爸爸' : '已设置为妈妈') : '已取消角色设置')
+  } catch {
+    ElMessage.error('设置失败')
   }
 }
 
@@ -144,6 +163,16 @@ async function pollExport(exportId: string) {
       <el-radio-group v-model="tierChoice" @change="onTierChange">
         <el-radio-button value="normal">普通</el-radio-button>
         <el-radio-button value="vip">VIP</el-radio-button>
+      </el-radio-group>
+    </el-card>
+
+    <el-card shadow="never" class="section-card">
+      <h3 class="section-title">我的角色</h3>
+      <p class="role-desc">设置后，写心语时会自动标注作者身份</p>
+      <el-radio-group v-model="parentRoleChoice" @change="onParentRoleChange">
+        <el-radio-button value="dad">爸爸</el-radio-button>
+        <el-radio-button value="mom">妈妈</el-radio-button>
+        <el-radio-button value="">不设置</el-radio-button>
       </el-radio-group>
     </el-card>
 
@@ -350,6 +379,13 @@ async function pollExport(exportId: string) {
 }
 
 .tier-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.role-desc {
   font-size: 13px;
   color: var(--text-secondary);
   margin-bottom: 12px;

@@ -9,6 +9,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AppHeader: typeof import('./components/common/AppHeader.vue')['default']
+    AppNav: typeof import('./components/common/AppNav.vue')['default']
     BabyBgSvg: typeof import('./components/BabyBgSvg.vue')['default']
     DiaryView: typeof import('./components/record/DiaryView.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']
@@ -25,6 +26,7 @@ declare module 'vue' {
     ElInputNumber: typeof import('element-plus/es')['ElInputNumber']
     ElOption: typeof import('element-plus/es')['ElOption']
     ElProgress: typeof import('element-plus/es')['ElProgress']
+    ElRadio: typeof import('element-plus/es')['ElRadio']
     ElRadioButton: typeof import('element-plus/es')['ElRadioButton']
     ElRadioGroup: typeof import('element-plus/es')['ElRadioGroup']
     ElSelect: typeof import('element-plus/es')['ElSelect']
@@ -41,6 +43,7 @@ declare module 'vue' {
     MediaUploader: typeof import('./components/media/MediaUploader.vue')['default']
     MilestoneMarker: typeof import('./components/timeline/MilestoneMarker.vue')['default']
     MilestonePicker: typeof import('./components/record/MilestonePicker.vue')['default']
+    ParentWordCard: typeof import('./components/parent-words/ParentWordCard.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     ThemeSwitcher: typeof import('./components/common/ThemeSwitcher.vue')['default']

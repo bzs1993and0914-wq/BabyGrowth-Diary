@@ -7,7 +7,8 @@ from pydantic import BaseModel
 
 class MediaUploadResponse(BaseModel):
     id: int
-    daily_record_id: int
+    daily_record_id: Optional[int] = None
+    parent_word_id: Optional[int] = None
     media_type: str
     original_path: str
     thumbnail_path: Optional[str] = None

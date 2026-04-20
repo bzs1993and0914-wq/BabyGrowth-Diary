@@ -36,6 +36,31 @@ export function uploadMedia(
   })
 }
 
+export function uploadMediaForParentWord(
+  file: File,
+  parentWordId: number,
+  description?: string,
+  sortOrder?: number,
+) {
+  const form = new FormData()
+  form.append('file', file)
+  form.append('parent_word_id', String(parentWordId))
+  if (description) form.append('description', description)
+  if (sortOrder !== undefined) form.append('sort_order', String(sortOrder))
+
+  return apiClient.post<MediaEntryResponse>('/api/media/upload', form, {
+    timeout: 120_000,
+    transformRequest: [
+      (data, headers) => {
+        if (data instanceof FormData) {
+          delete headers['Content-Type']
+        }
+        return data
+      },
+    ],
+  })
+}
+
 /** 返回媒体原文件的完整 URL（含认证 token），供 <img>/<video> 的 src 属性直接使用。 */
 export function getMediaUrl(id: number): string {
   const base = apiClient.defaults.baseURL ?? ''

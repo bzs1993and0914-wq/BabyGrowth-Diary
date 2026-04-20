@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import VERSION
 from app.database.init_db import init_db
 from app.services.storage_manager import ensure_dirs
-from app.api import auth, health, records, media, milestones, export, settings, growth_metrics
+from app.api import auth, health, records, media, milestones, export, settings, growth_metrics, parent_words
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,3 +51,4 @@ app.include_router(milestones.router, prefix="/api")
 app.include_router(export.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")
 app.include_router(growth_metrics.router, prefix="/api")
+app.include_router(parent_words.router, prefix="/api")

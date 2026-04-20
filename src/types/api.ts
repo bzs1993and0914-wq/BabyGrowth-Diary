@@ -35,6 +35,7 @@ export interface AuthUser {
   id: number
   username: string
   account_tier: 'normal' | 'vip'
+  parent_role?: string | null
 }
 
 export interface RegisterPayload {
@@ -220,4 +221,64 @@ export interface GrowthCurveData {
   values: number[]
   metric_type: string
   unit: string | null
+}
+
+export interface ParentWordCreate {
+  title: string
+  content: string
+  author_role?: string | null
+}
+
+export interface ParentWordUpdate {
+  title?: string
+  content?: string
+  author_role?: string | null
+}
+
+export interface ParentWordListItem {
+  id: number
+  title: string
+  content_preview: string
+  author_role: string | null
+  media_count: number
+  first_thumbnail: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface HighlightCreate {
+  start_offset: number
+  end_offset: number
+  color?: string
+}
+
+export interface HighlightResponse {
+  id: number
+  start_offset: number
+  end_offset: number
+  color: string | null
+  created_at: string
+}
+
+export interface ParentWordResponse {
+  id: number
+  title: string
+  content: string
+  author_role: string | null
+  created_at: string
+  updated_at: string
+  media_entries: MediaEntryResponse[]
+  highlights: HighlightResponse[]
+}
+
+export interface ParentWordListResponse {
+  items: ParentWordListItem[]
+  total: number
+  page: number
+  page_size: number
+  total_pages: number
+}
+
+export interface ProfileUpdate {
+  parent_role: string | null
 }

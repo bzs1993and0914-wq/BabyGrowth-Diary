@@ -5,3 +5,9 @@ backend/dist
 backend/.venv
 release
 .DS_Store
+__pycache__/
+*.pyc
+.env*
+*.log
+Thumbs.db
+backend/*.egg-info/

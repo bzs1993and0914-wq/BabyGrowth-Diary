@@ -1,33 +1,20 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import {
-  Plus,
-  Clock,
-  Star,
-  TrendCharts,
-  Sunny,
-  Moon,
-  Setting,
-  User,
-  Menu,
-} from '@element-plus/icons-vue'
+import { Plus, Sunny, Moon, Setting, User, MoreFilled } from '@element-plus/icons-vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessageBox } from 'element-plus'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 
 const router = useRouter()
 const route = useRoute()
 const settingsStore = useSettingsStore()
 const auth = useAuthStore()
 
-/** ≤767px：主导航收入抽屉，避免中文逐字折行 */
-const COMPACT_NAV_MQ = '(max-width: 767px)'
-const isCompactNav = ref(false)
-const mobileNavOpen = ref(false)
-let compactMq: MediaQueryList | undefined
+const isCompactNav = useMediaQuery('(max-width: 767px)')
+const mobileMenuOpen = ref(false)
 
-/** 与 variables.css 中 #app.app-scroll-lock 对应；避免使用 EP lockScroll 改写 body 宽度 */
 const APP_SCROLL_LOCK_CLASS = 'app-scroll-lock'
 let scrollYBeforeAppLock = 0
 
@@ -36,7 +23,6 @@ function setAppScrollLock(locked: boolean) {
   if (!app) return
   if (locked) {
     scrollYBeforeAppLock = window.scrollY || document.documentElement.scrollTop
-    /* fixed + 负 top 保持当前可视区域，避免仅靠 overflow/100vh 把文档压短导致 scroll 归零跳到顶栏 */
     app.style.top = `-${scrollYBeforeAppLock}px`
     app.classList.add(APP_SCROLL_LOCK_CLASS)
   } else {
@@ -46,29 +32,16 @@ function setAppScrollLock(locked: boolean) {
   }
 }
 
-function syncCompactNav(ev?: MediaQueryListEvent) {
-  isCompactNav.value = ev?.matches ?? compactMq?.matches ?? false
-}
-
-onMounted(() => {
-  compactMq = window.matchMedia(COMPACT_NAV_MQ)
-  syncCompactNav()
-  compactMq.addEventListener('change', syncCompactNav)
-})
-
 onUnmounted(() => {
   setAppScrollLock(false)
-  compactMq?.removeEventListener('change', syncCompactNav)
 })
 
 watch(
   () => route.fullPath,
-  () => {
-    mobileNavOpen.value = false
-  }
+  () => { mobileMenuOpen.value = false },
 )
 
-watch(mobileNavOpen, (open) => {
+watch(mobileMenuOpen, (open) => {
   setAppScrollLock(open)
 })
 
@@ -91,30 +64,8 @@ function onSheetDarkChange() {
 }
 
 function openSettingsFromSheet() {
-  mobileNavOpen.value = false
+  mobileMenuOpen.value = false
   router.push('/settings')
-}
-
-const navItems = [
-  { label: '时间轴', path: '/', name: 'timeline', icon: Clock },
-  { label: '里程碑', path: '/milestones', name: 'milestones', icon: Star },
-  { label: '成长曲线', path: '/growth', name: 'growth', icon: TrendCharts },
-]
-
-function isActive(name: string) {
-  return route.name === name
-}
-
-/** 显式 push，避免部分环境下 router-link + 嵌套 el-icon 导致点击/触摸不触发导航 */
-function navHref(path: string) {
-  return router.resolve({ path }).href
-}
-
-function goNav(e: MouseEvent, path: string) {
-  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
-  e.preventDefault()
-  if (isCompactNav.value) mobileNavOpen.value = false
-  void router.push(path)
 }
 </script>
 
@@ -126,47 +77,21 @@ function goNav(e: MouseEvent, path: string) {
         <span class="brand-title">BabyGrow</span>
       </div>
 
-      <nav v-if="!isCompactNav" class="nav-links" aria-label="主导航">
-        <a
-          v-for="item in navItems"
-          :key="item.name"
-          :href="navHref(item.path)"
-          :class="['nav-item', { active: isActive(item.name) }]"
-          :aria-current="isActive(item.name) ? 'page' : undefined"
-          @click="goNav($event, item.path)"
-        >
-          <el-icon :size="16"><component :is="item.icon" /></el-icon>
-          <span class="nav-label">{{ item.label }}</span>
-        </a>
-      </nav>
-      <div v-else class="header-fill" aria-hidden="true" />
-
-      <el-tooltip v-if="isCompactNav" content="打开菜单" placement="bottom">
-        <el-button
-          class="nav-menu-trigger"
-          text
-          circle
-          aria-label="打开导航菜单"
-          @click="mobileNavOpen = true"
-        >
-          <el-icon :size="22"><Menu /></el-icon>
-        </el-button>
-      </el-tooltip>
+      <div class="header-fill" />
 
       <div class="header-actions">
-        <span v-if="auth.user" class="user-chip" :title="auth.user.username">
+        <span v-if="auth.user && !isCompactNav" class="user-chip" :title="auth.user.username">
           <el-icon><User /></el-icon>
-          <span v-if="!isCompactNav" class="user-name">{{
-            auth.user.username
-          }}</span>
+          <span class="user-name">{{ auth.user.username }}</span>
           <el-tag
-            v-if="!isCompactNav && auth.user.account_tier === 'vip'"
+            v-if="auth.user.account_tier === 'vip'"
             size="small"
             type="warning"
           >
             VIP
           </el-tag>
         </span>
+
         <el-tooltip
           v-if="auth.isAuthenticated && isCompactNav"
           content="添加记录"
@@ -190,14 +115,7 @@ function goNav(e: MouseEvent, path: string) {
         >
           添加记录
         </el-button>
-        <el-button
-          v-if="auth.isAuthenticated && !isCompactNav"
-          text
-          type="danger"
-          @click="logout"
-        >
-          退出
-        </el-button>
+
         <el-button
           v-if="!auth.isAuthenticated"
           type="primary"
@@ -206,6 +124,7 @@ function goNav(e: MouseEvent, path: string) {
         >
           登录
         </el-button>
+
         <template v-if="!isCompactNav">
           <el-tooltip
             :content="settingsStore.darkMode ? '切换亮色' : '切换暗色'"
@@ -223,68 +142,82 @@ function goNav(e: MouseEvent, path: string) {
               <el-icon><Setting /></el-icon>
             </el-button>
           </el-tooltip>
+          <el-button
+            v-if="auth.isAuthenticated"
+            text
+            type="danger"
+            @click="logout"
+          >
+            退出
+          </el-button>
         </template>
+
+        <el-button
+          v-if="isCompactNav"
+          class="more-trigger"
+          text
+          circle
+          aria-label="更多选项"
+          @click="mobileMenuOpen = true"
+        >
+          <el-icon :size="20"><MoreFilled /></el-icon>
+        </el-button>
       </div>
     </div>
 
+    <!-- Mobile bottom sheet: settings & account only -->
     <el-drawer
-      v-model="mobileNavOpen"
+      v-model="mobileMenuOpen"
       direction="btt"
-      size="min(78vh, 520px)"
-      title="菜单"
+      size="min(50vh, 340px)"
+      title="更多"
       append-to-body
       class="babygrow-mobile-sheet"
       :lock-scroll="false"
     >
       <div class="sheet-handle" aria-hidden="true" />
-      <nav class="mobile-nav" aria-label="主导航">
-        <a
-          v-for="item in navItems"
-          :key="item.name"
-          :href="navHref(item.path)"
-          :class="['mobile-nav-item', { active: isActive(item.name) }]"
-          :aria-current="isActive(item.name) ? 'page' : undefined"
-          @click="goNav($event, item.path)"
+
+      <div v-if="auth.user" class="sheet-user-row">
+        <el-icon :size="18"><User /></el-icon>
+        <span class="sheet-user-name">{{ auth.user.username }}</span>
+        <el-tag
+          v-if="auth.user.account_tier === 'vip'"
+          size="small"
+          type="warning"
         >
-          <el-icon :size="18"><component :is="item.icon" /></el-icon>
-          <span>{{ item.label }}</span>
-        </a>
-        <el-button
-          v-if="auth.isAuthenticated"
-          type="primary"
-          class="mobile-nav-record"
-          :icon="Plus"
-          @click="router.push('/record/new')"
-        >
-          添加记录
-        </el-button>
-        <div class="mobile-sheet-divider" role="separator" />
-        <div class="mobile-sheet-row">
-          <span class="mobile-sheet-row-label">深色模式</span>
-          <el-switch
-            :model-value="settingsStore.darkMode"
-            aria-label="切换深色模式"
-            @change="onSheetDarkChange"
-          />
-        </div>
-        <button
-          type="button"
-          class="mobile-nav-item mobile-nav-item--button"
-          @click="openSettingsFromSheet"
-        >
-          <el-icon :size="18"><Setting /></el-icon>
-          <span>设置</span>
-        </button>
-        <el-button
-          v-if="auth.isAuthenticated"
-          class="mobile-nav-logout"
-          text
-          type="danger"
-          @click="logout"
-        >
-          退出登录
-        </el-button>
-      </nav>
+          VIP
+        </el-tag>
+      </div>
+
+      <div class="sheet-divider" role="separator" />
+
+      <div class="sheet-row">
+        <span class="sheet-row-label">深色模式</span>
+        <el-switch
+          :model-value="settingsStore.darkMode"
+          aria-label="切换深色模式"
+          @change="onSheetDarkChange"
+        />
+      </div>
+
+      <button
+        type="button"
+        class="sheet-action-item"
+        @click="openSettingsFromSheet"
+      >
+        <el-icon :size="18"><Setting /></el-icon>
+        <span>设置</span>
+      </button>
+
+      <el-button
+        v-if="auth.isAuthenticated"
+        class="sheet-logout"
+        text
+        type="danger"
+        @click="logout"
+      >
+        退出登录
+      </el-button>
     </el-drawer>
   </header>
 </template>
@@ -296,23 +229,21 @@ function goNav(e: MouseEvent, path: string) {
   left: 0;
   right: 0;
   z-index: 100;
-  height: 60px;
+  height: var(--header-height, 60px);
   background: var(--header-bg);
-  border-bottom: 1px solid var(--border-color);
   backdrop-filter: blur(12px);
   transition:
-    background-color 0.3s,
-    border-color 0.3s;
+    background-color 0.3s;
 }
 
 .header-inner {
-  max-width: 1100px;
-  margin: 0 auto;
   height: 100%;
   display: flex;
   align-items: center;
   padding: 0 24px;
-  gap: 24px;
+  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
   flex-wrap: nowrap;
   min-width: 0;
 }
@@ -322,8 +253,7 @@ function goNav(e: MouseEvent, path: string) {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  flex-shrink: 1;
-  min-width: 0;
+  flex-shrink: 0;
 }
 
 .brand-icon {
@@ -336,26 +266,6 @@ function goNav(e: MouseEvent, path: string) {
   color: var(--color-primary);
   letter-spacing: -0.5px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.nav-links {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  gap: 4px;
-  flex: 1;
-  min-width: 0;
-  flex-wrap: nowrap;
-  align-items: center;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-}
-
-.nav-links::-webkit-scrollbar {
-  display: none;
 }
 
 .header-fill {
@@ -363,82 +273,12 @@ function goNav(e: MouseEvent, path: string) {
   min-width: 0;
 }
 
-.nav-menu-trigger {
-  flex-shrink: 0;
-}
-
-.nav-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 14px;
-  color: var(--text-secondary);
-  text-decoration: none;
-  cursor: pointer;
-  transition:
-    color 0.2s,
-    background-color 0.2s;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.nav-item :deep(.el-icon) {
-  pointer-events: none;
-}
-
-.nav-label {
-  white-space: nowrap;
-}
-
-.nav-item:hover {
-  color: var(--text-primary);
-  background: var(--bg-secondary);
-}
-
-.nav-item.active {
-  color: var(--color-primary);
-  background: var(--color-primary-light);
-  font-weight: 600;
-}
-
 .header-actions {
-  position: relative;
-  z-index: 1;
   display: flex;
   gap: 8px;
   align-items: center;
   flex-shrink: 0;
   flex-wrap: nowrap;
-}
-
-@media (max-width: 767px) {
-  .app-header {
-    height: 54px;
-  }
-
-  .header-inner {
-    padding: 0 14px;
-    gap: 8px;
-  }
-
-  .brand-title {
-    font-size: 16px;
-    max-width: 28vw;
-  }
-
-  .brand-icon {
-    font-size: 22px;
-  }
-
-  .header-actions {
-    gap: 6px;
-  }
-
-  .header-actions :deep(.el-button.is-circle) {
-    padding: 7px;
-  }
 }
 
 .add-btn {
@@ -460,52 +300,39 @@ function goNav(e: MouseEvent, path: string) {
   white-space: nowrap;
 }
 
-.mobile-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.more-trigger {
+  flex-shrink: 0;
 }
 
-.mobile-nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  font-size: 15px;
-  color: var(--text-secondary);
-  text-decoration: none;
-  transition:
-    color 0.2s,
-    background-color 0.2s;
+/* ─── Mobile ─────────────────────────────────── */
+@media (max-width: 767px) {
+  .app-header {
+    height: var(--header-height-mobile, 54px);
+  }
+
+  .header-inner {
+    padding: 0 14px;
+    gap: 8px;
+  }
+
+  .brand-title {
+    font-size: 16px;
+  }
+
+  .brand-icon {
+    font-size: 22px;
+  }
+
+  .header-actions {
+    gap: 6px;
+  }
+
+  .header-actions :deep(.el-button.is-circle) {
+    padding: 7px;
+  }
 }
 
-.mobile-nav-item:hover {
-  color: var(--text-primary);
-  background: var(--bg-secondary);
-}
-
-.mobile-nav-item.active {
-  color: var(--color-primary);
-  background: var(--color-primary-light);
-  font-weight: 600;
-}
-
-.mobile-nav-item :deep(.el-icon) {
-  pointer-events: none;
-}
-
-.mobile-nav-record {
-  justify-content: center;
-  margin-top: 12px;
-  width: 100%;
-}
-
-.mobile-nav-logout {
-  margin-top: 8px;
-  width: 100%;
-}
-
+/* ─── Bottom sheet content ────────────────────── */
 .sheet-handle {
   width: 40px;
   height: 5px;
@@ -515,13 +342,29 @@ function goNav(e: MouseEvent, path: string) {
   opacity: 0.85;
 }
 
-.mobile-sheet-divider {
-  height: 1px;
-  background: var(--border-color);
-  margin: 12px 0 8px;
+.sheet-user-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 12px;
+  font-size: 15px;
+  color: var(--text-primary);
+  font-weight: 500;
 }
 
-.mobile-sheet-row {
+.sheet-user-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sheet-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 4px 0 8px;
+}
+
+.sheet-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -530,12 +373,12 @@ function goNav(e: MouseEvent, path: string) {
   gap: 12px;
 }
 
-.mobile-sheet-row-label {
+.sheet-row-label {
   font-size: 15px;
   color: var(--text-primary);
 }
 
-.mobile-nav-item--button {
+.sheet-action-item {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -554,16 +397,18 @@ function goNav(e: MouseEvent, path: string) {
     background-color 0.2s;
 }
 
-.mobile-nav-item--button:hover {
+.sheet-action-item:hover {
   color: var(--text-primary);
   background: var(--bg-secondary);
+}
+
+.sheet-logout {
+  margin-top: 8px;
+  width: 100%;
 }
 </style>
 
 <style>
-/**
- * 底部抽屉 teleport 到 body，scoped 选择器无法命中面板节点
- */
 .babygrow-mobile-sheet.el-drawer {
   border-radius: 18px 18px 0 0;
   box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.12);

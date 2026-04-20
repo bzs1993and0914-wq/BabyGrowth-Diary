@@ -13,6 +13,8 @@ from app.models.milestone import Milestone
 from app.models.milestone_category import MilestoneCategory
 from app.models.app_settings import AppSettings
 from app.models.growth_metric import GrowthMetric
+from app.models.parent_word import ParentWord
+from app.models.parent_word_highlight import ParentWordHighlight
 
 __all__ = [
     "Base",
@@ -24,4 +26,6 @@ __all__ = [
     "MilestoneCategory",
     "AppSettings",
     "GrowthMetric",
+    "ParentWord",
+    "ParentWordHighlight",
 ]

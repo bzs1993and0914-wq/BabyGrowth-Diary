@@ -7,8 +7,15 @@ import {
   changePassword as changePasswordApi,
   devSetTier,
 } from '@/api/auth'
+import { updateProfile as updateProfileApi } from '@/api/parentWords'
 import { getStoredToken, setStoredToken } from '@/utils/authToken'
-import type { AuthUser, LoginPayload, RegisterPayload, ChangePasswordPayload } from '@/types/api'
+import type {
+  AuthUser,
+  LoginPayload,
+  RegisterPayload,
+  ChangePasswordPayload,
+  ProfileUpdate,
+} from '@/types/api'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(getStoredToken())
@@ -80,6 +87,11 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = res.data
   }
 
+  async function updateProfile(payload: ProfileUpdate) {
+    const res = await updateProfileApi(payload)
+    user.value = res.data
+  }
+
   return {
     token,
     user,
@@ -92,6 +104,7 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     changePassword,
     setAccountTier,
+    updateProfile,
     setToken,
   }
 })

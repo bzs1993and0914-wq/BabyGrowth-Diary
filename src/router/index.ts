@@ -59,6 +59,30 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/parent-words',
+      name: 'parent-words',
+      component: () => import('@/views/ParentWordsView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/parent-words/new',
+      name: 'parent-word-new',
+      component: () => import('@/views/ParentWordEditView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/parent-words/:id/edit',
+      name: 'parent-word-edit',
+      component: () => import('@/views/ParentWordEditView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/parent-words/:id',
+      name: 'parent-word-detail',
+      component: () => import('@/views/ParentWordDetailView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/settings',
       name: 'settings',
       component: () => import('@/views/SettingsView.vue'),

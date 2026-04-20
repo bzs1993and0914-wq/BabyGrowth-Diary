@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import logging
+
 from sqlalchemy import inspect, text
+
+logger = logging.getLogger(__name__)
 
 
 def upgrade_schema_sync(conn) -> None:
@@ -27,3 +31,92 @@ def upgrade_schema_sync(conn) -> None:
             )
         if "allergy_notes" not in cols:
             conn.execute(text("ALTER TABLE daily_records ADD COLUMN allergy_notes TEXT"))
+
+    if "media_entries" in tables:
+        cols = {c["name"] for c in inspector.get_columns("media_entries")}
+        if "parent_word_id" not in cols:
+            conn.execute(
+                text(
+                    "ALTER TABLE media_entries ADD COLUMN parent_word_id INTEGER "
+                    "REFERENCES parent_words(id) ON DELETE CASCADE"
+                )
+            )
+
+        col_map = {c["name"]: c for c in inspector.get_columns("media_entries")}
+        if not col_map.get("daily_record_id", {}).get("nullable", True):
+            _rebuild_media_entries_nullable(conn)
+
+    if "users" in tables:
+        cols = {c["name"] for c in inspector.get_columns("users")}
+        if "parent_role" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN parent_role TEXT"))
+
+    if "parent_word_highlights" not in tables:
+        conn.execute(
+            text(
+                "CREATE TABLE IF NOT EXISTS parent_word_highlights ("
+                "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                "  parent_word_id INTEGER NOT NULL REFERENCES parent_words(id) ON DELETE CASCADE,"
+                "  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                "  start_offset INTEGER NOT NULL,"
+                "  end_offset INTEGER NOT NULL,"
+                "  color TEXT DEFAULT 'yellow',"
+                "  created_at TEXT NOT NULL DEFAULT (datetime('now'))"
+                ")"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_pwh_parent_word_id "
+                "ON parent_word_highlights(parent_word_id)"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_pwh_user_id "
+                "ON parent_word_highlights(user_id)"
+            )
+        )
+
+
+def _rebuild_media_entries_nullable(conn) -> None:
+    """Rebuild media_entries to make daily_record_id nullable.
+
+    SQLite does not support ALTER COLUMN, so we recreate the table.
+    """
+    logger.info("Migrating media_entries: daily_record_id NOT NULL → nullable")
+    conn.execute(text("PRAGMA foreign_keys = OFF"))
+    conn.execute(
+        text(
+            "CREATE TABLE media_entries_new ("
+            "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "  daily_record_id INTEGER REFERENCES daily_records(id) ON DELETE CASCADE,"
+            "  parent_word_id INTEGER REFERENCES parent_words(id) ON DELETE CASCADE,"
+            "  media_type VARCHAR(10) NOT NULL,"
+            "  original_path TEXT NOT NULL,"
+            "  thumbnail_path TEXT,"
+            "  description TEXT,"
+            "  file_size INTEGER,"
+            "  original_filename TEXT,"
+            "  exif_date TEXT,"
+            "  sort_order INTEGER NOT NULL DEFAULT 0,"
+            "  created_at TEXT NOT NULL"
+            ")"
+        )
+    )
+    conn.execute(
+        text(
+            "INSERT INTO media_entries_new "
+            "  (id, daily_record_id, parent_word_id, media_type, original_path,"
+            "   thumbnail_path, description, file_size, original_filename,"
+            "   exif_date, sort_order, created_at) "
+            "SELECT id, daily_record_id, parent_word_id, media_type, original_path,"
+            "   thumbnail_path, description, file_size, original_filename,"
+            "   exif_date, sort_order, created_at "
+            "FROM media_entries"
+        )
+    )
+    conn.execute(text("DROP TABLE media_entries"))
+    conn.execute(text("ALTER TABLE media_entries_new RENAME TO media_entries"))
+    conn.execute(text("PRAGMA foreign_keys = ON"))
+    logger.info("media_entries migration complete")
