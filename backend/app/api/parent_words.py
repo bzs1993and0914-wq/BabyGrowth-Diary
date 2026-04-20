@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import math
-from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -174,11 +173,13 @@ async def update_parent_word(
     if not pw:
         raise HTTPException(status_code=404, detail="Parent word not found")
 
+    # exclude_unset=True 仅保留请求体中显式提供的字段，因此不必再判断 value is not None；
+    # 让用户可以把 author_role 从 "dad"/"mom" 显式置为 null（"不标注"）。
+    # title/content 在 Pydantic schema 已做 min_length=1 校验，不会出现空字符串。
     update_payload = data.model_dump(exclude_unset=True)
     for key, value in update_payload.items():
-        if value is not None:
-            setattr(pw, key, value)
-    pw.updated_at = datetime.now().isoformat()
+        setattr(pw, key, value)
+    # updated_at 已由模型 onupdate hook 自动处理，无需手动赋值。
 
     await db.commit()
 

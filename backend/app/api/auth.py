@@ -9,6 +9,7 @@ from app.models.user import User
 from app.schemas.auth import (
     ChangePasswordRequest,
     LoginRequest,
+    MediaTokenResponse,
     MessageResponse,
     ProfileUpdate,
     RegisterRequest,
@@ -17,6 +18,7 @@ from app.schemas.auth import (
 )
 from app.services.auth_service import (
     create_access_token,
+    create_media_access_token,
     hash_password,
     verify_password,
 )
@@ -109,6 +111,17 @@ async def change_password(
     current.password_hash = hash_password(data.new_password)
     await db.commit()
     return MessageResponse(message="密码已更新")
+
+
+@router.post("/media-token", response_model=MediaTokenResponse)
+async def issue_media_token(current: User = Depends(get_current_user)):
+    """颁发短时效 (scope=media) token，供前端在 ``<img>/<video>`` URL 查询参数中使用。
+
+    调用方必须先用完整登录 JWT 通过 ``Authorization`` header 鉴权；颁发的 media token
+    不能反过来访问任何非媒体端点，降低 URL 泄漏风险。前端应在 token 过期前自行刷新。
+    """
+    token, expires_at = create_media_access_token(current.id)
+    return MediaTokenResponse(token=token, expires_at=expires_at)
 
 
 @router.post("/dev/set-tier", response_model=UserPublic)

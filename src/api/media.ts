@@ -1,9 +1,14 @@
 import apiClient from './client'
 import type { MediaEntryResponse, MediaUpdate } from '@/types/api'
-import { getStoredToken } from '@/utils/authToken'
+import { getMediaTokenSync } from '@/utils/mediaToken'
 
+/**
+ * 构造媒体 URL 的鉴权查询串。使用 scope=media 的短时效 token 而非完整登录 JWT，
+ * 即使 URL 被写入日志/复制也只能短时间内访问媒体文件，无法调用其他 API。
+ * 首次调用前应已通过 `ensureMediaToken()` 预热（通常在 auth store init/login 时）。
+ */
 function tokenParam(): string {
-  const t = getStoredToken()
+  const t = getMediaTokenSync()
   return t ? `?token=${encodeURIComponent(t)}` : ''
 }
 

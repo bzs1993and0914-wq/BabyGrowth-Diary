@@ -131,24 +131,44 @@ export function useParentWordDraft(key: string) {
   let intervalId: ReturnType<typeof setInterval> | null = null
 
   /**
+   * 序列化当前草稿内容用于对比；排除 `savedAt` 这种每次都会变的字段，
+   * 以便 30s 兜底定时器在"内容未变化"时跳过无意义的 localStorage 写入。
+   */
+  function serializeForCompare(data: Omit<DraftData, 'savedAt'>): string {
+    return `${data.title}\u0001${data.content}\u0001${data.authorRole ?? ''}`
+  }
+
+  let lastSerialized = ''
+
+  function saveIfChanged(data: Omit<DraftData, 'savedAt'>) {
+    const key = serializeForCompare(data)
+    if (key === lastSerialized) return
+    lastSerialized = key
+    saveDraft(data)
+  }
+
+  /**
    * 启动双重自动保存机制：
    * 1. **响应式 watch**：表单数据变化后 2s（防抖）自动保存；
-   * 2. **30s 定时器**：兜底保障，即使 watch 因某些原因未触发也不会丢失。
+   * 2. **30s 定时器**：兜底保障，即使 watch 因某些原因未触发也不会丢失；
+   *    但需要在内容未变化时跳过写入，避免高频无意义 I/O 与 `savedAt` 刷新。
    *
    * @param getData - 返回当前表单数据的函数，会被 `watch` 和定时器反复调用。
    */
   function startAutoSave(getData: () => Omit<DraftData, 'savedAt'>) {
     watch(getData, (data) => {
       if (data.title || data.content) {
+        const key = serializeForCompare(data)
+        if (key === lastSerialized) return
+        lastSerialized = key
         debouncedSave(data)
       }
     }, { deep: true })
 
     intervalId = setInterval(() => {
       const data = getData()
-      if (data.title || data.content) {
-        saveDraft(data)
-      }
+      if (!data.title && !data.content) return
+      saveIfChanged(data)
     }, 30000)
   }
 

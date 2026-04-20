@@ -9,6 +9,7 @@ import {
 } from '@/api/auth'
 import { updateProfile as updateProfileApi } from '@/api/parentWords'
 import { getStoredToken, setStoredToken } from '@/utils/authToken'
+import { clearMediaToken, ensureMediaToken } from '@/utils/mediaToken'
 import type {
   AuthUser,
   LoginPayload,
@@ -39,12 +40,23 @@ export const useAuthStore = defineStore('auth', () => {
       loading.value = true
       const res = await fetchMe()
       user.value = res.data
+      // 恢复会话后立即预热 media token，确保首屏 <img>/<video> 能同步拿到鉴权串
+      await warmupMediaToken()
     } catch {
       setToken(null)
       user.value = null
+      clearMediaToken()
     } finally {
       loading.value = false
       initialized.value = true
+    }
+  }
+
+  async function warmupMediaToken(): Promise<void> {
+    try {
+      await ensureMediaToken()
+    } catch (e) {
+      console.warn('[auth] failed to warm up media token', e)
     }
   }
 
@@ -54,12 +66,13 @@ export const useAuthStore = defineStore('auth', () => {
     setStoredToken(t)
   }
 
-  /** 调用登录接口，成功后保存 Token 和用户信息。 */
+  /** 调用登录接口，成功后保存 Token 和用户信息，并预热 media token。 */
   async function login(payload: LoginPayload) {
     const res = await loginApi(payload)
     setToken(res.data.access_token)
     user.value = res.data.user
     initialized.value = true
+    await warmupMediaToken()
   }
 
   /** 调用注册接口，成功后保存 Token 和用户信息（与登录行为一致）。 */
@@ -68,12 +81,14 @@ export const useAuthStore = defineStore('auth', () => {
     setToken(res.data.access_token)
     user.value = res.data.user
     initialized.value = true
+    await warmupMediaToken()
   }
 
-  /** 清除本地 Token 和用户信息，路由守卫会将未登录用户重定向到登录页。 */
+  /** 清除本地 Token、用户信息及媒体 token，路由守卫会将未登录用户重定向到登录页。 */
   function logout() {
     setToken(null)
     user.value = null
+    clearMediaToken()
   }
 
   /** 修改当前用户密码（需提供旧密码）。 */

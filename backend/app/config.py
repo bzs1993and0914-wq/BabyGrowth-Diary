@@ -35,6 +35,14 @@ JWT_EXPIRE_HOURS = 24 * 7
 TIER_MEDIA_CAP_NORMAL = 1
 TIER_MEDIA_CAP_VIP = 9
 
+# 父母心语（parent_words）每条最多可关联的图片数量，前后端需保持一致
+PARENT_WORD_MEDIA_CAP = 5
+
+# 媒体访问签名 Token 的默认有效期（秒），用于 <img>/<video> 的查询参数鉴权
+MEDIA_TOKEN_TTL_SECONDS = 15 * 60
+# 上传文件写盘时的分块大小（字节），避免大视频一次性读入内存
+UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1MB
+
 
 def get_jwt_secret() -> str:
     """Persist a stable secret under app data for JWT signing."""

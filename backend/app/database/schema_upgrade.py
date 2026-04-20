@@ -83,8 +83,20 @@ def _rebuild_media_entries_nullable(conn) -> None:
     """Rebuild media_entries to make daily_record_id nullable.
 
     SQLite does not support ALTER COLUMN, so we recreate the table.
+    迁移过程中必须保留 CHECK 约束和索引，否则旧库升级后会丢失数据完整性保障。
     """
     logger.info("Migrating media_entries: daily_record_id NOT NULL → nullable")
+
+    existing_indexes = {
+        row[1]
+        for row in conn.execute(
+            text(
+                "SELECT * FROM sqlite_master "
+                "WHERE type='index' AND tbl_name='media_entries'"
+            )
+        ).fetchall()
+    }
+
     conn.execute(text("PRAGMA foreign_keys = OFF"))
     conn.execute(
         text(
@@ -100,7 +112,8 @@ def _rebuild_media_entries_nullable(conn) -> None:
             "  original_filename TEXT,"
             "  exif_date TEXT,"
             "  sort_order INTEGER NOT NULL DEFAULT 0,"
-            "  created_at TEXT NOT NULL"
+            "  created_at TEXT NOT NULL,"
+            "  CONSTRAINT ck_media_type CHECK (media_type IN ('image', 'video'))"
             ")"
         )
     )
@@ -118,5 +131,22 @@ def _rebuild_media_entries_nullable(conn) -> None:
     )
     conn.execute(text("DROP TABLE media_entries"))
     conn.execute(text("ALTER TABLE media_entries_new RENAME TO media_entries"))
+
+    conn.execute(
+        text(
+            "CREATE INDEX IF NOT EXISTS ix_media_entries_daily_record_id "
+            "ON media_entries(daily_record_id)"
+        )
+    )
+    conn.execute(
+        text(
+            "CREATE INDEX IF NOT EXISTS ix_media_entries_parent_word_id "
+            "ON media_entries(parent_word_id)"
+        )
+    )
+
     conn.execute(text("PRAGMA foreign_keys = ON"))
-    logger.info("media_entries migration complete")
+    logger.info(
+        "media_entries migration complete (old indexes=%s, ck_media_type restored)",
+        sorted(existing_indexes),
+    )

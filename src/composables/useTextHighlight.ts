@@ -191,13 +191,25 @@ export function useTextHighlight(
     }
   }
 
-  async function removeHighlightsAt(ids: number[]) {
-    if (saving.value || !ids.length) return
+  async function removeHighlightsAt(ids: number[]): Promise<{ success: number; failed: number }> {
+    if (saving.value || !ids.length) return { success: 0, failed: 0 }
     saving.value = true
     try {
-      await Promise.all(ids.map((id) => removeHighlight(wordId.value, id)))
-      const removed = new Set(ids)
-      highlights.value = highlights.value.filter((h) => !removed.has(h.id))
+      // 使用 allSettled 隔离单个失败：只把接口成功的 id 从本地列表移除，
+      // 避免"前端乐观清空 → 服务端保留"导致 UI 与数据库不一致。
+      const results = await Promise.allSettled(
+        ids.map((id) => removeHighlight(wordId.value, id).then(() => id)),
+      )
+      const removed = new Set<number>()
+      let failed = 0
+      for (const r of results) {
+        if (r.status === 'fulfilled') removed.add(r.value)
+        else failed += 1
+      }
+      if (removed.size) {
+        highlights.value = highlights.value.filter((h) => !removed.has(h.id))
+      }
+      return { success: removed.size, failed }
     } finally {
       saving.value = false
     }

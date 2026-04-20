@@ -6,14 +6,20 @@ import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { useRouter } from 'vue-router'
 import { EditPen } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 const store = useParentWordsStore()
 const router = useRouter()
 
-function loadMore() {
-  if (store.hasMore && !store.loading) {
-    store.nextPage()
-    store.loadList(true)
+async function loadMore() {
+  if (!store.hasMore || store.loading) return
+  store.nextPage()
+  try {
+    await store.loadList(true)
+  } catch {
+    // 加载失败时回退页码，避免用户下次滚动时跳过这一页
+    store.page -= 1
+    ElMessage.error('加载更多失败，请稍后重试')
   }
 }
 
@@ -21,13 +27,17 @@ function handleScroll() {
   const scrollY = window.scrollY + window.innerHeight
   const docHeight = document.documentElement.scrollHeight
   if (docHeight - scrollY < 200) {
-    loadMore()
+    void loadMore()
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   store.resetList()
-  store.loadList()
+  try {
+    await store.loadList()
+  } catch {
+    ElMessage.error('心语列表加载失败')
+  }
   window.addEventListener('scroll', handleScroll, { passive: true })
 })
 

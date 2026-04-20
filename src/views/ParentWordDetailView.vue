@@ -93,8 +93,11 @@ function onClickHighlight(ids: number[], event: MouseEvent) {
     confirmButtonText: '取消高亮',
     cancelButtonText: '保留',
     type: 'info',
-  }).then(() => {
-    removeHighlightsAt(ids)
+  }).then(async () => {
+    const { failed } = await removeHighlightsAt(ids)
+    if (failed > 0) {
+      ElMessage.warning(`${failed} 个高亮取消失败，请稍后重试`)
+    }
   }).catch(() => {})
 }
 

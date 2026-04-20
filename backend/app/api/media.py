@@ -15,10 +15,12 @@ from app.config import (
     ALLOWED_MEDIA_TYPES,
     ALLOWED_VIDEO_TYPES,
     MAX_VIDEO_SIZE,
+    PARENT_WORD_MEDIA_CAP,
     THUMBNAIL_MAX_SIZE,
     THUMBNAIL_QUALITY,
     TIER_MEDIA_CAP_NORMAL,
     TIER_MEDIA_CAP_VIP,
+    UPLOAD_CHUNK_SIZE,
 )
 from app.models.daily_record import DailyRecord
 from app.models.media_entry import MediaEntry
@@ -139,9 +141,10 @@ async def upload_media(
             )
         )
         existing = int(count_result.scalar() or 0)
-        if existing >= 5:
+        if existing >= PARENT_WORD_MEDIA_CAP:
             raise HTTPException(
-                status_code=400, detail="心语图片数量已达上限（5 张）"
+                status_code=400,
+                detail=f"心语图片数量已达上限（{PARENT_WORD_MEDIA_CAP} 张）",
             )
 
     if not file.filename:
@@ -158,11 +161,11 @@ async def upload_media(
     is_heic = ext in {"heic", "heif"}
     media_type = "video" if is_video else "image"
 
-    content = await file.read()
-    file_size = len(content)
-
-    if is_video and file_size > MAX_VIDEO_SIZE:
-        raise HTTPException(status_code=400, detail="Video file exceeds 2GB limit")
+    # 父母心语按规格只支持图片，防止直连 API 绕过前端限制上传大视频。
+    if parent_word_id is not None and is_video:
+        raise HTTPException(
+            status_code=400, detail="父母心语暂不支持视频，只能上传图片"
+        )
 
     if parent_word_id is not None:
         folder_date = date.today().isoformat()
@@ -178,7 +181,29 @@ async def upload_media(
     media_dir = get_media_dir(folder_date, subfolder=subfolder)
     unique_name = f"{uuid.uuid4().hex}.{ext}"
     file_path = media_dir / unique_name
-    file_path.write_bytes(content)
+
+    # 流式写盘：按块读取，避免把 2GB 视频一次性加载进内存；
+    # 视频类型边写边校验大小，超限立即中断并清理部分写入的文件。
+    file_size = 0
+    try:
+        with file_path.open("wb") as out:
+            while True:
+                chunk = await file.read(UPLOAD_CHUNK_SIZE)
+                if not chunk:
+                    break
+                file_size += len(chunk)
+                if is_video and file_size > MAX_VIDEO_SIZE:
+                    out.close()
+                    file_path.unlink(missing_ok=True)
+                    raise HTTPException(
+                        status_code=400, detail="Video file exceeds 2GB limit"
+                    )
+                out.write(chunk)
+    except HTTPException:
+        raise
+    except Exception:
+        file_path.unlink(missing_ok=True)
+        raise
 
     rel_prefix = f"{subfolder}/" if subfolder else ""
     relative_original = (

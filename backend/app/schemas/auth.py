@@ -41,3 +41,10 @@ class TokenResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+
+class MediaTokenResponse(BaseModel):
+    """媒体文件访问用的短时效 Token，供 ``<img>/<video>`` URL 查询参数使用。"""
+
+    token: str
+    expires_at: int  # unix seconds, UTC
